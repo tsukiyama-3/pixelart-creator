@@ -11,6 +11,9 @@
   "devDependencies": {
     "@nuxt/devtools": "latest",
     "@types/node": "^18",
+    "firebase-admin": "^11.9.0",
+    "firebase-functions": "^4.4.0",
+    "firebase-functions-test": "^3.1.0",
     "nuxt": "^3.5.2"
   }
 }
