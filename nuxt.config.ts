@@ -4,4 +4,11 @@ export default defineNuxtConfig({
   nitro: {
     preset: "firebase",
   },
+  css: ["~/assets/css/main.css"],
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
+  },
 });
