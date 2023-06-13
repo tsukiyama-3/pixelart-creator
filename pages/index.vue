@@ -3,6 +3,7 @@ const canvas = ref();
 const preview = ref();
 const isClicked = ref(false);
 const canvasSize = 32;
+const previewSize = 160;
 const dotSize = 16;
 const coords = ref();
 const currentColor = ref("#ff0000");
@@ -24,7 +25,8 @@ const init = () => {
   context.scale(dotSize, dotSize);
   const previewContext = preview.value.getContext("2d");
   previewContext.imageSmoothingEnabled = false;
-  previewContext.scale(dotSize / 4, dotSize / 4);
+  const scale = (canvasSize * dotSize) / previewSize;
+  previewContext.scale(dotSize / scale, dotSize / scale);
 };
 
 onMounted(() => {
@@ -386,14 +388,6 @@ const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
   return pixels;
 };
 
-const normalize = (value: number, def: number) => {
-  if (typeof value === "undefined" || value === null) {
-    return def;
-  } else {
-    return value;
-  }
-};
-
 const colorToInt = (color: string, alpha: number = 255) => {
   const hex = color.replace("#", "");
   const red = parseInt(hex.substr(0, 2), 16);
@@ -420,7 +414,7 @@ const saveColor = () => {
 </script>
 
 <template>
-  <div class="grid grid-cols-2 h-full">
+  <div class="grow grid grid-cols-2 h-full">
     <div>
       <div
         :class="{
@@ -437,16 +431,16 @@ const saveColor = () => {
           ref="canvas"
           :width="512"
           :height="512"
-          style="border: 1px solid #000"
+          style="border: 1px solid #2b2c34"
         ></canvas>
       </div>
     </div>
     <div style="padding-top: 80px" class="space-y-2">
       <canvas
         ref="preview"
-        width="128"
-        height="128"
-        style="border: 1px solid #000"
+        :width="previewSize"
+        :height="previewSize"
+        style="border: 1px solid #2b2c34"
       ></canvas>
       <div class="flex">
         <input
@@ -465,33 +459,49 @@ const saveColor = () => {
           class="hidden"
           v-model="mode"
         />
-        <div class="space-x-2">
+        <div class="flex space-x-2">
           <label
             for="pen"
-            class="inline-flex rounded-md items-center justify-center w-10 h-10 border-2 border-solid border-[#000000] cursor-pointer"
+            class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
+            :class="{ 'bg-[#2b2c34]': mode === 'pen' }"
           >
             <img
               src="~/assets/pencil.svg"
-              width="24"
-              height="24"
+              width="32"
+              height="32"
               alt="pen-icon"
             />
           </label>
           <label
             for="bucket"
-            class="inline-flex rounded-md items-center justify-center w-10 h-10 border-2 border-solid border-[#000000] cursor-pointer"
+            class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
+            :class="{ 'bg-[#2b2c34]': mode === 'bucket' }"
           >
             <img
               src="~/assets/fill.svg"
-              width="24"
-              height="24"
+              width="32"
+              height="32"
               alt="bucket-icon"
               color="white"
             />
           </label>
+          <div>
+            <button
+              @click="toggleGrid"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :class="{ 'bg-[#2b2c34]': visibleGrid }"
+            >
+              <img
+                src="~/assets/grid.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
         </div>
       </div>
-      <div class="flex space-x-2">
+      <div class="grid grid-cols-[repeat(8,minmax(48px,48px))] gap-2">
         <div v-for="color in colorPallet">
           <input
             type="radio"
@@ -503,63 +513,39 @@ const saveColor = () => {
           />
           <label
             :for="color"
-            class="content-[''] grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
+            class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
             :style="{ backgroundColor: color }"
           >
             <img
               v-if="color === currentColor && mode === 'pen'"
               src="~/assets/pencil.svg"
-              width="24"
-              height="24"
+              width="32"
+              height="32"
               alt="pen-icon"
             />
             <img
               v-else-if="color === currentColor && mode === 'bucket'"
               src="~/assets/fill.svg"
-              width="24"
-              height="24"
+              width="32"
+              height="32"
               alt="bucket-icon"
             />
           </label>
         </div>
-        <div v-if="visibleModal">
-          <input type="color" v-model="pickedColor" />
-          <button @click="saveColor">Save</button>
-        </div>
+        <input type="color" v-model="pickedColor" v-show="visibleModal" />
+        <button
+          v-if="visibleModal"
+          @click="saveColor"
+          class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+        >
+          <img src="~/assets/done.svg" width="32" height="32" alt="pen-icon" />
+        </button>
         <div v-else>
           <button
             @click="addColor"
-            class="grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
           >
-            <img src="~/assets/add.svg" width="28" height="28" alt="pen-icon" />
-          </button>
-        </div>
-      </div>
-      <div class="flex space-x-2">
-        <div>
-          <button
-            @click="toggleGrid"
-            class="grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
-          >
-            <img
-              src="~/assets/grid.svg"
-              width="28"
-              height="28"
-              alt="pen-icon"
-            />
-          </button>
-        </div>
-        <div>
-          <button
-            @click="clear"
-            class="grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
-          >
-            <img
-              src="~/assets/remove.svg"
-              width="28"
-              height="28"
-              alt="pen-icon"
-            />
+            <img src="~/assets/add.svg" width="32" height="32" alt="pen-icon" />
           </button>
         </div>
       </div>
@@ -567,53 +553,92 @@ const saveColor = () => {
         <div>
           <button
             @click="undo"
-            class="grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
           >
             <img
               src="~/assets/arrow_back.svg"
-              width="28"
-              height="28"
+              width="32"
+              height="32"
+              alt="pen-icon"
+            />
+          </button>
+        </div>
+        <div class="text-2xl font-bold grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]">
+          <ClientOnly>
+            {{ undoPixelsStates.length - 1 }}
+          </ClientOnly>
+        </div>
+        <div>
+          <button
+            @click="redo"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+          >
+            <img
+              src="~/assets/arrow_next.svg"
+              width="32"
+              height="32"
+              alt="pen-icon"
+            />
+          </button>
+        </div>
+      </div>
+      <div class="flex space-x-2">
+        <div>
+          <button
+            @click="downloadImage"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+          >
+            <img
+              src="~/assets/download.svg"
+              width="32"
+              height="32"
               alt="pen-icon"
             />
           </button>
         </div>
         <div>
           <button
-            @click="redo"
-            class="grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
+            @click="clear"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
           >
             <img
-              src="~/assets/arrow_next.svg"
-              width="28"
-              height="28"
+              src="~/assets/remove.svg"
+              width="32"
+              height="32"
               alt="pen-icon"
             />
           </button>
         </div>
       </div>
-      <div>
-          <button
-            @click="downloadImage"
-            class="grid justify-center items-center w-10 h-10 rounded-md border-2 border-solid border-[#000000] cursor-pointer"
-          >
-            <img
-              src="~/assets/download.svg"
-              width="28"
-              height="28"
-              alt="pen-icon"
-            />
-          </button>
-        </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .pen-cursor {
-  cursor: url("assets/pencil.svg") 0 12, default;
+  cursor: url("assets/pencil-cursor.svg") 0 12, default;
 }
 
 .bucket-cursor {
   cursor: url("assets/fill.svg") 12 12, default;
+}
+
+input[type="color"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: block;
+  margin: 0;
+  width: 44px;
+  height: 48px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border-radius: 50%;
+  border: 2px solid #2b2c34;
 }
 </style>
