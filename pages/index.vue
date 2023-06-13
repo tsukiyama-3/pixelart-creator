@@ -2,9 +2,10 @@
 const canvas = ref();
 const preview = ref();
 const isClicked = ref(false);
-const canvasSize = 32;
-const previewSize = 160;
-const dotSize = 16;
+const canvasSize = 512;
+const previewSize = 158;
+const pixelSize = ref(32);
+const dotSize = ref(16);
 const coords = ref();
 const currentColor = ref("#ff0000");
 const mode = ref("pen");
@@ -17,25 +18,25 @@ const redoPixelsStates = ref([]);
 const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
 const colorPallet = ref(["#ff0000"]);
-pixels.value = new Uint32Array(canvasSize * canvasSize);
+pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
 
 const init = () => {
   const context = canvas.value.getContext("2d");
   context.imageSmoothingEnabled = false;
-  context.scale(dotSize, dotSize);
+  context.scale(dotSize.value, dotSize.value);
   const previewContext = preview.value.getContext("2d");
   previewContext.imageSmoothingEnabled = false;
-  const scale = (canvasSize * dotSize) / previewSize;
-  previewContext.scale(dotSize / scale, dotSize / scale);
+  const scale = (pixelSize.value * dotSize.value) / previewSize;
+  previewContext.scale(dotSize.value / scale, dotSize.value / scale);
+  const imageData = uint32ArrayToImageData(
+    pixels.value,
+    pixelSize.value,
+    pixelSize.value
+  );
+  undoPixelsStates.value.push(imageData);
 };
 
 onMounted(() => {
-  const imageData = uint32ArrayToImageData(
-    pixels.value,
-    canvasSize,
-    canvasSize
-  );
-  undoPixelsStates.value.push(imageData);
   init();
 });
 
@@ -84,12 +85,17 @@ const onCanvasMousedown = (event: MouseEvent) => {
   }
 };
 
+const onMouseleave = () => {
+  originalColor.value = null;
+  originalCoords.value = null;
+};
+
 // ピクセル座標を返す
 const getRelativeCoordinates = (x: number, y: number) => {
   const canvasRect = canvas.value.getBoundingClientRect();
   return {
-    x: Math.floor((x - canvasRect.left) / dotSize),
-    y: Math.floor((y - canvasRect.top) / dotSize),
+    x: Math.floor((x - canvasRect.left) / dotSize.value),
+    y: Math.floor((y - canvasRect.top) / dotSize.value),
   };
 };
 
@@ -143,8 +149,8 @@ const onCanvasMouseup = () => {
   isClicked.value = false;
   const imageData = uint32ArrayToImageData(
     pixels.value,
-    canvasSize,
-    canvasSize
+    pixelSize.value,
+    pixelSize.value
   );
   undoPixelsStates.value.push(imageData);
 };
@@ -158,10 +164,13 @@ const renderPixel = () => {
   // コンテキスト取得
   const offscreenContext = offscreenCanvas.getContext("2d");
   // width height を設定
-  offscreenCanvas.width = canvasSize;
-  offscreenCanvas.height = canvasSize;
+  offscreenCanvas.width = pixelSize.value;
+  offscreenCanvas.height = pixelSize.value;
   // imageDataを作成(width・height・dataが入っている)
-  const imageData = offscreenContext?.createImageData(canvasSize, canvasSize);
+  const imageData = offscreenContext?.createImageData(
+    pixelSize.value,
+    pixelSize.value
+  );
   // imageData.dataをimgDataDataに代入
   const imgDataData = imageData?.data;
   // pixels.value.bufferをUint8ClampedArrayの形式でdataに代入
@@ -171,7 +180,7 @@ const renderPixel = () => {
   // imageDataをoffscreenContextに反映
   offscreenContext?.putImageData(imageData!, 0, 0);
   // コンテキストをクリアにする
-  context.clearRect(0, 0, canvasSize, canvasSize);
+  context.clearRect(0, 0, pixelSize.value, pixelSize.value);
   // 描画の状態をスタックに保存している
   context.save();
   // offscreenCanvasの内容をキャンバスコンテキストに描画している
@@ -179,7 +188,7 @@ const renderPixel = () => {
   context.restore();
   // preview
   const previewContext = preview.value.getContext("2d");
-  previewContext.clearRect(0, 0, canvasSize, canvasSize);
+  previewContext.clearRect(0, 0, pixelSize.value, pixelSize.value);
   previewContext.save();
   previewContext.drawImage(offscreenCanvas, 0, 0);
   previewContext.restore();
@@ -269,7 +278,7 @@ const visitConnectedPixels = (pixel: any, pixelVisitor: any) => {
   pixelVisitor(pixel);
 
   const loopCount = ref(0);
-  const cellCount = canvasSize * canvasSize;
+  const cellCount = pixelSize.value * pixelSize.value;
   while (queue.length > 0) {
     loopCount.value++;
     const currentItem: any = queue.pop();
@@ -299,7 +308,7 @@ const visitConnectedPixels = (pixel: any, pixelVisitor: any) => {
 // ピクセルカラーを取得する
 const getPixelColor = (x: number, y: number) => {
   if (containsPixel(x, y)) {
-    return pixels.value[y * canvasSize + x];
+    return pixels.value[y * pixelSize.value + x];
   } else {
     return null;
   }
@@ -308,14 +317,14 @@ const getPixelColor = (x: number, y: number) => {
 // ピクセルカラーを設定する
 const setPixelColor = (x: number, y: number, color: number) => {
   if (containsPixel(x, y)) {
-    const index = y * canvasSize + x;
+    const index = y * pixelSize.value + x;
     pixels.value[index] = color;
   }
 };
 
 // キャンバスないか判定する
 const containsPixel = (col: number, row: number) => {
-  return col >= 0 && row >= 0 && col < canvasSize && row < canvasSize;
+  return col >= 0 && row >= 0 && col < pixelSize.value && row < pixelSize.value;
 };
 
 const addGrid = () => {
@@ -325,18 +334,18 @@ const addGrid = () => {
   context.lineWidth = 1 / 64;
 
   // 横の罫線を描画
-  for (let x = 1; x < canvasSize; x += 1) {
+  for (let x = 1; x < pixelSize.value; x += 1) {
     context.beginPath();
     context.moveTo(x, 0);
-    context.lineTo(x, canvasSize);
+    context.lineTo(x, pixelSize.value);
     context.stroke();
   }
 
   // 縦の罫線を描画
-  for (let y = 1; y < canvasSize; y += 1) {
+  for (let y = 1; y < pixelSize.value; y += 1) {
     context.beginPath();
     context.moveTo(0, y);
-    context.lineTo(canvasSize, y);
+    context.lineTo(pixelSize.value, y);
     context.stroke();
   }
 };
@@ -351,11 +360,11 @@ const toggleGrid = () => {
 };
 
 const clear = () => {
-  pixels.value = new Uint32Array(canvasSize * canvasSize);
+  pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
   const imageData = uint32ArrayToImageData(
     pixels.value,
-    canvasSize,
-    canvasSize
+    pixelSize.value,
+    pixelSize.value
   );
   undoPixelsStates.value.push(imageData);
   renderPixel();
@@ -411,6 +420,19 @@ const saveColor = () => {
   }
   visibleModal.value = false;
 };
+
+const changeSize = (number: number) => {
+  pixelSize.value = number;
+  dotSize.value = canvasSize / pixelSize.value;
+  console.log(pixelSize.value, 'pixelSize.value', dotSize.value, 'dotSize.value')
+  clear()
+  const context = canvas.value.getContext("2d");
+  const initialTransform = context.getTransform();
+  context.setTransform(initialTransform);
+  const previewContext = preview.value.getContext("2d");
+  previewContext.setTransform(initialTransform);
+  init()
+};
 </script>
 
 <template>
@@ -421,11 +443,12 @@ const saveColor = () => {
           'pen-cursor': mode === 'pen',
           'bucket-cursor': mode === 'bucket',
         }"
-        style="padding: 80px 160px; float: right"
+        style="padding: 80px 160px"
         class="canvas"
         @mousemove="onCanvasMousemove"
         @mousedown="onCanvasMousedown"
         @mouseup="onCanvasMouseup"
+        @mouseleave="onMouseleave"
       >
         <canvas
           ref="canvas"
@@ -553,7 +576,8 @@ const saveColor = () => {
         <div>
           <button
             @click="undo"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+            :disabled="undoPixelsStates.length <= 1"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <img
               src="~/assets/arrow_back.svg"
@@ -563,7 +587,9 @@ const saveColor = () => {
             />
           </button>
         </div>
-        <div class="text-2xl font-bold grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]">
+        <div
+          class="text-2xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]"
+        >
           <ClientOnly>
             {{ undoPixelsStates.length - 1 }}
           </ClientOnly>
@@ -571,7 +597,8 @@ const saveColor = () => {
         <div>
           <button
             @click="redo"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+            :disabled="redoPixelsStates.length <= 0"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <img
               src="~/assets/arrow_next.svg"
@@ -582,6 +609,21 @@ const saveColor = () => {
           </button>
         </div>
       </div>
+      <!-- <div class="flex space-x-2">
+        <div>
+          <button
+            @click="changeSize(64)"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+          >
+            <img
+              src="~/assets/64x64.svg"
+              width="40"
+              height="40"
+              alt="pen-icon"
+            />
+          </button>
+        </div>
+      </div> -->
       <div class="flex space-x-2">
         <div>
           <button

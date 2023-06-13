@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col min-h-screen bg-[#fffffe]">
-    <header>header</header>
+    <header>Pixelart Creator</header>
     <slot />
-    <footer>footer</footer>
+    <footer>© 2023 tsukiyama</footer>
   </div>
 </template>
