@@ -2,7 +2,7 @@
 const canvas = ref();
 const preview = ref();
 const isClicked = ref(false);
-const canvasSize = 512;
+const canvasSize = 656;
 const previewSize = 158;
 const pixelSize = ref(32);
 const dotSize = ref(16);
@@ -13,6 +13,8 @@ const visibleGrid = ref(false);
 const pixels = ref();
 const previousCol = ref(0);
 const previousRow = ref(0);
+const startCol = ref(null);
+const startRow = ref(null);
 const undoPixelsStates = ref([]);
 const redoPixelsStates = ref([]);
 const originalColor = ref<number | null>(null);
@@ -23,7 +25,7 @@ pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
 const init = () => {
   const context = canvas.value.getContext("2d");
   context.imageSmoothingEnabled = false;
-  context.scale(dotSize.value, dotSize.value);
+  context.scale(canvasSize / pixelSize.value, canvasSize / pixelSize.value);
   const previewContext = preview.value.getContext("2d");
   previewContext.imageSmoothingEnabled = false;
   const scale = (pixelSize.value * dotSize.value) / previewSize;
@@ -71,6 +73,8 @@ const onCanvasMousedown = (event: MouseEvent) => {
   coords.value = getRelativeCoordinates(event.clientX, event.clientY);
   previousCol.value = coords.value.x;
   previousRow.value = coords.value.y;
+  startCol.value = coords.value.x;
+  startRow.value = coords.value.y;
   if (mode.value === "pen") {
     drawAt(coords.value.x, coords.value.y);
   } else if (mode.value === "bucket") {
@@ -85,17 +89,33 @@ const onCanvasMousedown = (event: MouseEvent) => {
   }
 };
 
+const onCanvasMouseup = () => {
+  isClicked.value = false;
+  const imageData = uint32ArrayToImageData(
+    pixels.value,
+    pixelSize.value,
+    pixelSize.value
+  );
+  if (containsPixel(startCol.value!, startRow.value!)) {
+    undoPixelsStates.value.push(imageData);
+  }
+  startCol.value = null
+  startRow.value = null
+  renderPreview();
+};
+
 const onMouseleave = () => {
   originalColor.value = null;
   originalCoords.value = null;
+  onCanvasMouseup()
 };
 
 // ピクセル座標を返す
 const getRelativeCoordinates = (x: number, y: number) => {
   const canvasRect = canvas.value.getBoundingClientRect();
   return {
-    x: Math.floor((x - canvasRect.left) / dotSize.value),
-    y: Math.floor((y - canvasRect.top) / dotSize.value),
+    x: Math.floor((x - canvasRect.left) / (canvasSize / pixelSize.value)),
+    y: Math.floor((y - canvasRect.top) / (canvasSize / pixelSize.value)),
   };
 };
 
@@ -145,16 +165,6 @@ const hoverAt = (x: number, y: number) => {
   }
 };
 
-const onCanvasMouseup = () => {
-  isClicked.value = false;
-  const imageData = uint32ArrayToImageData(
-    pixels.value,
-    pixelSize.value,
-    pixelSize.value
-  );
-  undoPixelsStates.value.push(imageData);
-};
-
 // ピクセルを描画する
 const renderPixel = () => {
   // コンテキスト取得
@@ -186,16 +196,21 @@ const renderPixel = () => {
   // offscreenCanvasの内容をキャンバスコンテキストに描画している
   context.drawImage(offscreenCanvas, 0, 0);
   context.restore();
+  // grid
+  if (visibleGrid.value) {
+    addGrid();
+  }
+  return offscreenCanvas;
+};
+
+const renderPreview = () => {
+  const offscreenCanvas = renderPixel();
   // preview
   const previewContext = preview.value.getContext("2d");
   previewContext.clearRect(0, 0, pixelSize.value, pixelSize.value);
   previewContext.save();
   previewContext.drawImage(offscreenCanvas, 0, 0);
   previewContext.restore();
-  // grid
-  if (visibleGrid.value) {
-    addGrid();
-  }
 };
 
 const undo = () => {
@@ -203,7 +218,10 @@ const undo = () => {
     const previousState =
       undoPixelsStates.value[undoPixelsStates.value.length - 2];
     pixels.value = imageDataToUint32Array(previousState);
+    originalColor.value = null;
+    originalCoords.value = null;
     renderPixel();
+    renderPreview();
     redoPixelsStates.value.push(undoPixelsStates.value.pop()!);
   }
 };
@@ -212,7 +230,10 @@ const redo = () => {
   if (redoPixelsStates.value.length > 0) {
     const nextState = redoPixelsStates.value.pop();
     pixels.value = imageDataToUint32Array(nextState!);
+    originalColor.value = null;
+    originalCoords.value = null;
     renderPixel();
+    renderPreview();
     undoPixelsStates.value.push(nextState!);
   }
 };
@@ -324,6 +345,9 @@ const setPixelColor = (x: number, y: number, color: number) => {
 
 // キャンバスないか判定する
 const containsPixel = (col: number, row: number) => {
+  if (col === null || row === null) {
+    return false
+  }
   return col >= 0 && row >= 0 && col < pixelSize.value && row < pixelSize.value;
 };
 
@@ -424,98 +448,163 @@ const saveColor = () => {
 const changeSize = (number: number) => {
   pixelSize.value = number;
   dotSize.value = canvasSize / pixelSize.value;
-  console.log(pixelSize.value, 'pixelSize.value', dotSize.value, 'dotSize.value')
-  clear()
+  console.log(
+    pixelSize.value,
+    "pixelSize.value",
+    dotSize.value,
+    "dotSize.value"
+  );
+  clear();
   const context = canvas.value.getContext("2d");
   const initialTransform = context.getTransform();
   context.setTransform(initialTransform);
   const previewContext = preview.value.getContext("2d");
   previewContext.setTransform(initialTransform);
-  init()
+  init();
 };
 </script>
 
 <template>
-  <div class="grow grid grid-cols-2 h-full">
-    <div>
-      <div
-        :class="{
-          'pen-cursor': mode === 'pen',
-          'bucket-cursor': mode === 'bucket',
-        }"
-        style="padding: 80px 160px"
-        class="canvas"
-        @mousemove="onCanvasMousemove"
-        @mousedown="onCanvasMousedown"
-        @mouseup="onCanvasMouseup"
-        @mouseleave="onMouseleave"
-      >
-        <canvas
-          ref="canvas"
-          :width="512"
-          :height="512"
-          style="border: 1px solid #2b2c34"
-        ></canvas>
+  <div
+    class="grow flex items-center justify-center"
+    @mousemove="onCanvasMousemove"
+    @mousedown="onCanvasMousedown"
+    @mouseup="onCanvasMouseup"
+    @mouseleave="onMouseleave"
+  >
+    <div class="grid grid-cols-[656px_auto] gap-8">
+      <div>
+        <div
+          :class="{
+            'pen-cursor': mode === 'pen',
+            'bucket-cursor': mode === 'bucket',
+          }"
+        >
+          <canvas
+            ref="canvas"
+            :width="canvasSize"
+            :height="canvasSize"
+            class="border border-solid border-[#2b2c34]"
+          ></canvas>
+        </div>
       </div>
-    </div>
-    <div style="padding-top: 80px" class="space-y-2">
-      <canvas
-        ref="preview"
-        :width="previewSize"
-        :height="previewSize"
-        style="border: 1px solid #2b2c34"
-      ></canvas>
-      <div class="flex">
-        <input
-          type="radio"
-          name="mode"
-          value="pen"
-          id="pen"
-          class="hidden"
-          v-model="mode"
-        />
-        <input
-          type="radio"
-          name="mode"
-          value="bucket"
-          id="bucket"
-          class="hidden"
-          v-model="mode"
-        />
-        <div class="flex space-x-2">
-          <label
-            for="pen"
-            class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
-            :class="{ 'bg-[#2b2c34]': mode === 'pen' }"
+      <div class="space-y-2">
+        <canvas
+          ref="preview"
+          :width="previewSize"
+          :height="previewSize"
+          class="border border-solid border-[#2b2c34]"
+        ></canvas>
+        <div class="flex">
+          <input
+            type="radio"
+            name="mode"
+            value="pen"
+            id="pen"
+            class="hidden"
+            v-model="mode"
+          />
+          <input
+            type="radio"
+            name="mode"
+            value="bucket"
+            id="bucket"
+            class="hidden"
+            v-model="mode"
+          />
+          <div class="flex space-x-2">
+            <label
+              for="pen"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :class="{ 'bg-[#2b2c34]': mode === 'pen' }"
+            >
+              <img
+                src="~/assets/pencil.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+            </label>
+            <label
+              for="bucket"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :class="{ 'bg-[#2b2c34]': mode === 'bucket' }"
+            >
+              <img
+                src="~/assets/fill.svg"
+                width="32"
+                height="32"
+                alt="bucket-icon"
+                color="white"
+              />
+            </label>
+            <div>
+              <button
+                @click="toggleGrid"
+                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+                :class="{ 'bg-[#2b2c34]': visibleGrid }"
+              >
+                <img
+                  src="~/assets/grid.svg"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-[repeat(8,minmax(48px,48px))] gap-2">
+          <div v-for="color in colorPallet">
+            <input
+              type="radio"
+              name="color"
+              :id="color"
+              :value="color"
+              v-model="currentColor"
+              class="hidden"
+            />
+            <label
+              :for="color"
+              class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :style="{ backgroundColor: color }"
+            >
+              <img
+                v-if="color === currentColor && mode === 'pen'"
+                src="~/assets/pencil.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="color === currentColor && mode === 'bucket'"
+                src="~/assets/fill.svg"
+                width="32"
+                height="32"
+                alt="bucket-icon"
+              />
+            </label>
+          </div>
+          <input type="color" v-model="pickedColor" v-show="visibleModal" />
+          <button
+            v-if="visibleModal"
+            @click="saveColor"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
           >
             <img
-              src="~/assets/pencil.svg"
+              src="~/assets/done.svg"
               width="32"
               height="32"
               alt="pen-icon"
             />
-          </label>
-          <label
-            for="bucket"
-            class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
-            :class="{ 'bg-[#2b2c34]': mode === 'bucket' }"
-          >
-            <img
-              src="~/assets/fill.svg"
-              width="32"
-              height="32"
-              alt="bucket-icon"
-              color="white"
-            />
-          </label>
-          <div>
+          </button>
+          <div v-else>
             <button
-              @click="toggleGrid"
+              @click="addColor"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-              :class="{ 'bg-[#2b2c34]': visibleGrid }"
             >
               <img
-                src="~/assets/grid.svg"
+                src="~/assets/add.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -523,133 +612,85 @@ const changeSize = (number: number) => {
             </button>
           </div>
         </div>
-      </div>
-      <div class="grid grid-cols-[repeat(8,minmax(48px,48px))] gap-2">
-        <div v-for="color in colorPallet">
-          <input
-            type="radio"
-            name="color"
-            :id="color"
-            :value="color"
-            v-model="currentColor"
-            class="hidden"
-          />
-          <label
-            :for="color"
-            class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-            :style="{ backgroundColor: color }"
+        <div class="flex space-x-2">
+          <div>
+            <button
+              @click="undo"
+              :disabled="undoPixelsStates.length <= 1"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <img
+                src="~/assets/arrow_back.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
+          <div
+            class="text-2xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]"
           >
-            <img
-              v-if="color === currentColor && mode === 'pen'"
-              src="~/assets/pencil.svg"
-              width="32"
-              height="32"
-              alt="pen-icon"
-            />
-            <img
-              v-else-if="color === currentColor && mode === 'bucket'"
-              src="~/assets/fill.svg"
-              width="32"
-              height="32"
-              alt="bucket-icon"
-            />
-          </label>
+            <ClientOnly>
+              {{ undoPixelsStates.length - 1 }}
+            </ClientOnly>
+          </div>
+          <div>
+            <button
+              @click="redo"
+              :disabled="redoPixelsStates.length <= 0"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <img
+                src="~/assets/arrow_next.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
         </div>
-        <input type="color" v-model="pickedColor" v-show="visibleModal" />
-        <button
-          v-if="visibleModal"
-          @click="saveColor"
-          class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-        >
-          <img src="~/assets/done.svg" width="32" height="32" alt="pen-icon" />
-        </button>
-        <div v-else>
-          <button
-            @click="addColor"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-          >
-            <img src="~/assets/add.svg" width="32" height="32" alt="pen-icon" />
-          </button>
-        </div>
-      </div>
-      <div class="flex space-x-2">
-        <div>
-          <button
-            @click="undo"
-            :disabled="undoPixelsStates.length <= 1"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <img
-              src="~/assets/arrow_back.svg"
-              width="32"
-              height="32"
-              alt="pen-icon"
-            />
-          </button>
-        </div>
-        <div
-          class="text-2xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]"
-        >
-          <ClientOnly>
-            {{ undoPixelsStates.length - 1 }}
-          </ClientOnly>
-        </div>
-        <div>
-          <button
-            @click="redo"
-            :disabled="redoPixelsStates.length <= 0"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <img
-              src="~/assets/arrow_next.svg"
-              width="32"
-              height="32"
-              alt="pen-icon"
-            />
-          </button>
-        </div>
-      </div>
-      <!-- <div class="flex space-x-2">
-        <div>
-          <button
-            @click="changeSize(64)"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-          >
-            <img
-              src="~/assets/64x64.svg"
-              width="40"
-              height="40"
-              alt="pen-icon"
-            />
-          </button>
-        </div>
-      </div> -->
-      <div class="flex space-x-2">
-        <div>
-          <button
-            @click="downloadImage"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-          >
-            <img
-              src="~/assets/download.svg"
-              width="32"
-              height="32"
-              alt="pen-icon"
-            />
-          </button>
-        </div>
-        <div>
-          <button
-            @click="clear"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
-          >
-            <img
-              src="~/assets/remove.svg"
-              width="32"
-              height="32"
-              alt="pen-icon"
-            />
-          </button>
+        <!-- <div class="flex space-x-2">
+          <div>
+            <button
+              @click="changeSize(64)"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+            >
+              <img
+                src="~/assets/64x64.svg"
+                width="40"
+                height="40"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
+        </div> -->
+        <div class="flex space-x-2">
+          <div>
+            <button
+              @click="downloadImage"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+            >
+              <img
+                src="~/assets/download.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
+          <div>
+            <button
+              @click="clear"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+            >
+              <img
+                src="~/assets/remove.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -662,7 +703,7 @@ const changeSize = (number: number) => {
 }
 
 .bucket-cursor {
-  cursor: url("assets/fill.svg") 12 12, default;
+  cursor: url("assets/fill-cursor.svg") 12 12, default;
 }
 
 input[type="color"] {
