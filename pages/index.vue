@@ -267,9 +267,19 @@ const downloadImage = () => {
     visibleGrid.value = false;
     renderPixel();
   }
+  const fileName = prompt(
+    "Please enter the name for the image you want to save"
+  );
+  if (!fileName) {
+    if (visibleGridState) {
+      visibleGrid.value = true;
+      renderPixel();
+    }
+    return;
+  }
   const link = document.createElement("a");
   link.href = canvas.value.toDataURL();
-  link.download = "image.png";
+  link.download = fileName + ".png";
   link.click();
   if (visibleGridState) {
     visibleGrid.value = true;
@@ -415,6 +425,8 @@ const clear = () => {
   );
   undoPixelsStates.value.push(imageData);
   localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
+  originalColor.value = null;
+  originalCoords.value = null;
   renderPixel();
 };
 
@@ -472,7 +484,7 @@ const saveColor = () => {
 
 const removeColor = (colorCode: string) => {
   if (colorCode === currentColor.value) {
-    currentColor.value = colorPallet.value[0]
+    currentColor.value = colorPallet.value[0];
   }
   const index = colorPallet.value.indexOf(colorCode);
   if (index !== -1) {
@@ -511,11 +523,17 @@ const loadColorFromLocalStorage = () => {
 
 <template>
   <div
-    class="grow flex items-center justify-center"
+    class="grow flex items-center justify-center outline-none"
     @mousemove="onCanvasMousemove"
     @mousedown="onCanvasMousedown"
     @mouseup="onCanvasMouseup"
     @mouseleave="onMouseleave"
+    @keydown.g="toggleGrid"
+    @keydown.p="mode = 'pen'"
+    @keydown.b="mode = 'bucket'"
+    @keydown.left="undo"
+    @keydown.right="redo"
+    tabindex="0"
   >
     <div class="grid grid-cols-[656px_auto] gap-8">
       <div>
@@ -617,7 +635,7 @@ const loadColorFromLocalStorage = () => {
               class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer relative color-label"
               :style="{ backgroundColor: color }"
             >
-            <button
+              <button
                 v-show="colorPallet.length > 1"
                 class="color-delete-btn absolute w-5 h-5 leading-none bg-[#fffffe] rounded-full -top-2 -left-2 border-2 border-solid border-[#2b2c34]"
                 @click="removeColor(color)"
@@ -829,5 +847,4 @@ input[type="color"]::-webkit-color-swatch {
   opacity: 1;
   visibility: visible;
 }
-
 </style>
