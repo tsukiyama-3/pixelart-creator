@@ -105,8 +105,15 @@ const onCanvasMouseup = () => {
 };
 
 const onMouseleave = () => {
-  originalColor.value = null;
-  originalCoords.value = null;
+  if (originalCoords.value) {
+    // 元の色に戻す
+    setPixelColor(
+      originalCoords.value.x,
+      originalCoords.value.y,
+      originalColor.value!
+    );
+    renderPixel();
+  }
   onCanvasMouseup()
 };
 
