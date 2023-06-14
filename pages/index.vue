@@ -470,6 +470,17 @@ const saveColor = () => {
   visibleModal.value = false;
 };
 
+const removeColor = (colorCode: string) => {
+  if (colorCode === currentColor.value) {
+    currentColor.value = colorPallet.value[0]
+  }
+  const index = colorPallet.value.indexOf(colorCode);
+  if (index !== -1) {
+    colorPallet.value.splice(index, 1);
+  }
+  saveColorToLocalStorage(colorPallet.value);
+};
+
 const changeSize = (number: number) => {
   pixelSize.value = number;
   dotSize.value = canvasSize / pixelSize.value;
@@ -549,9 +560,10 @@ const loadColorFromLocalStorage = () => {
           <div class="flex space-x-2">
             <label
               for="pen"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
               :class="{ 'bg-[#2b2c34]': mode === 'pen' }"
             >
+              <span class="tooltip-text">Pen (P)</span>
               <img
                 src="~/assets/pencil.svg"
                 width="32"
@@ -561,9 +573,10 @@ const loadColorFromLocalStorage = () => {
             </label>
             <label
               for="bucket"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
               :class="{ 'bg-[#2b2c34]': mode === 'bucket' }"
             >
+              <span class="tooltip-text">Bucket (B)</span>
               <img
                 src="~/assets/fill.svg"
                 width="32"
@@ -575,9 +588,10 @@ const loadColorFromLocalStorage = () => {
             <div>
               <button
                 @click="toggleGrid"
-                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
                 :class="{ 'bg-[#2b2c34]': visibleGrid }"
               >
+                <span class="tooltip-text">Grid (G)</span>
                 <img
                   src="~/assets/grid.svg"
                   width="32"
@@ -600,9 +614,21 @@ const loadColorFromLocalStorage = () => {
             />
             <label
               :for="color"
-              class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer relative color-label"
               :style="{ backgroundColor: color }"
             >
+            <button
+                v-show="colorPallet.length > 1"
+                class="color-delete-btn absolute w-5 h-5 leading-none bg-[#fffffe] rounded-full -top-2 -left-2 border-2 border-solid border-[#2b2c34]"
+                @click="removeColor(color)"
+              >
+                <img
+                  src="~/assets/remove.svg"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+              </button>
               <img
                 v-if="color === currentColor && mode === 'pen'"
                 src="~/assets/pencil.svg"
@@ -623,8 +649,9 @@ const loadColorFromLocalStorage = () => {
           <button
             v-if="visibleModal"
             @click="saveColor"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
           >
+            <span class="tooltip-text">Save Color</span>
             <img
               src="~/assets/done.svg"
               width="32"
@@ -635,8 +662,9 @@ const loadColorFromLocalStorage = () => {
           <div v-else>
             <button
               @click="addColor"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
             >
+              <span class="tooltip-text">Add Color</span>
               <img
                 src="~/assets/add.svg"
                 width="32"
@@ -651,10 +679,12 @@ const loadColorFromLocalStorage = () => {
             <button
               @click="undo"
               :disabled="undoPixelsStates.length <= 1"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip"
             >
+              <span class="tooltip-text opacity-0">Undo (←)</span>
               <img
                 src="~/assets/arrow_back.svg"
+                :class="{ 'opacity-30': undoPixelsStates.length <= 1 }"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -672,10 +702,12 @@ const loadColorFromLocalStorage = () => {
             <button
               @click="redo"
               :disabled="redoPixelsStates.length <= 0"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip"
             >
+              <span class="tooltip-text opacity-0">Redo (→)</span>
               <img
                 src="~/assets/arrow_next.svg"
+                :class="{ 'opacity-30': redoPixelsStates.length <= 0 }"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -702,8 +734,9 @@ const loadColorFromLocalStorage = () => {
           <div>
             <button
               @click="downloadImage"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
             >
+              <span class="tooltip-text opacity-0">Download</span>
               <img
                 src="~/assets/download.svg"
                 width="32"
@@ -715,10 +748,11 @@ const loadColorFromLocalStorage = () => {
           <div>
             <button
               @click="clear"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
             >
+              <span class="tooltip-text opacity-0">Clear Canvas</span>
               <img
-                src="~/assets/remove.svg"
+                src="~/assets/clear.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -758,4 +792,42 @@ input[type="color"]::-webkit-color-swatch {
   border-radius: 50%;
   border: 2px solid #2b2c34;
 }
+
+.color-label:hover .color-delete-btn {
+  display: block;
+}
+
+.color-delete-btn {
+  display: none;
+}
+
+.tooltip {
+  position: relative;
+  cursor: pointer;
+}
+
+.tooltip-text {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -30px;
+  display: inline-block;
+  padding: 5px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  background: #2b2c34;
+  color: #fff;
+  border-radius: 3px;
+  transition: 0.3s ease-in;
+  z-index: 10;
+}
+
+.tooltip:hover .tooltip-text {
+  opacity: 1;
+  visibility: visible;
+}
+
 </style>
