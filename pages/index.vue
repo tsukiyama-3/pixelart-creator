@@ -38,6 +38,12 @@ const init = () => {
   } else {
     pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
   }
+  const savedColorPallet = loadColorFromLocalStorage();
+  if (savedColorPallet.length > 0) {
+    colorPallet.value = savedColorPallet;
+  } else {
+    colorPallet.value = ["#ff0000"];
+  }
   const imageData = uint32ArrayToImageData(
     pixels.value,
     pixelSize.value,
@@ -456,6 +462,7 @@ const addColor = () => {
 const saveColor = () => {
   if (pickedColor.value && !colorPallet.value.includes(pickedColor.value)) {
     colorPallet.value.push(pickedColor.value);
+    saveColorToLocalStorage(colorPallet.value);
   }
   if (pickedColor.value) {
     currentColor.value = pickedColor.value;
@@ -481,15 +488,14 @@ const changeSize = (number: number) => {
   init();
 };
 
-const saveDataToLocalStorage = (data) => {
-  localStorage.setItem('undoPixelsStates', JSON.stringify(data));
-}
+const saveColorToLocalStorage = (colorPallet) => {
+  localStorage.setItem("colorPallet", JSON.stringify(colorPallet));
+};
 
-// ローカルストレージからデータを読み込む関数
-const loadDataFromLocalStorage = () => {
-  const data = localStorage.getItem('undoPixelsStates');
-  return data ? JSON.parse(data) : null;
-}
+const loadColorFromLocalStorage = () => {
+  const storedColorPallet = localStorage.getItem("colorPallet");
+  return storedColorPallet ? JSON.parse(storedColorPallet) : [];
+};
 </script>
 
 <template>
