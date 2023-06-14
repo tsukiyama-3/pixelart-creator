@@ -20,7 +20,6 @@ const redoPixelsStates = ref([]);
 const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
 const colorPallet = ref(["#ff0000"]);
-pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
 
 const init = () => {
   const context = canvas.value.getContext("2d");
@@ -30,6 +29,15 @@ const init = () => {
   previewContext.imageSmoothingEnabled = false;
   const scale = (pixelSize.value * dotSize.value) / previewSize;
   previewContext.scale(dotSize.value / scale, dotSize.value / scale);
+  // localStrage
+  const storedPixels = localStorage.getItem("pixels");
+  if (storedPixels) {
+    pixels.value = new Uint32Array(JSON.parse(storedPixels));
+    renderPixel();
+    renderPreview();
+  } else {
+    pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
+  }
   const imageData = uint32ArrayToImageData(
     pixels.value,
     pixelSize.value,
@@ -98,9 +106,10 @@ const onCanvasMouseup = () => {
   );
   if (containsPixel(startCol.value!, startRow.value!)) {
     undoPixelsStates.value.push(imageData);
+    localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
   }
-  startCol.value = null
-  startRow.value = null
+  startCol.value = null;
+  startRow.value = null;
   renderPreview();
 };
 
@@ -114,7 +123,7 @@ const onMouseleave = () => {
     );
     renderPixel();
   }
-  onCanvasMouseup()
+  onCanvasMouseup();
 };
 
 // ピクセル座標を返す
@@ -242,6 +251,7 @@ const redo = () => {
     renderPixel();
     renderPreview();
     undoPixelsStates.value.push(nextState!);
+    localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
   }
 };
 
@@ -353,7 +363,7 @@ const setPixelColor = (x: number, y: number, color: number) => {
 // キャンバスないか判定する
 const containsPixel = (col: number, row: number) => {
   if (col === null || row === null) {
-    return false
+    return false;
   }
   return col >= 0 && row >= 0 && col < pixelSize.value && row < pixelSize.value;
 };
@@ -398,6 +408,7 @@ const clear = () => {
     pixelSize.value
   );
   undoPixelsStates.value.push(imageData);
+  localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
   renderPixel();
 };
 
@@ -469,6 +480,16 @@ const changeSize = (number: number) => {
   previewContext.setTransform(initialTransform);
   init();
 };
+
+const saveDataToLocalStorage = (data) => {
+  localStorage.setItem('undoPixelsStates', JSON.stringify(data));
+}
+
+// ローカルストレージからデータを読み込む関数
+const loadDataFromLocalStorage = () => {
+  const data = localStorage.getItem('undoPixelsStates');
+  return data ? JSON.parse(data) : null;
+}
 </script>
 
 <template>
