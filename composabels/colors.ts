@@ -1,15 +1,15 @@
 export const useColor = () => {
-  const currentColor = ref("#ff0000");
-  const colorPallet = ref(["#ff0000"]);
+  const currentColor = ref<string | null>(null);
+  const colorPallet = ref<string[] | null>([]);
   const visibleColorPicker = ref(false);
   const pickedColor = ref("#000000");
   const addColor = () => {
     visibleColorPicker.value = true;
   };
   const saveColor = () => {
-    if (pickedColor.value && !colorPallet.value.includes(pickedColor.value)) {
-      colorPallet.value.push(pickedColor.value);
-      saveColorToLocalStorage(colorPallet.value);
+    if (pickedColor.value && !colorPallet.value!.includes(pickedColor.value)) {
+      colorPallet.value!.push(pickedColor.value);
+      saveColorToLocalStorage(colorPallet.value!);
     }
     if (pickedColor.value) {
       currentColor.value = pickedColor.value;
@@ -17,14 +17,14 @@ export const useColor = () => {
     visibleColorPicker.value = false;
   };
   const removeColor = (colorCode: string) => {
-    if (colorCode === currentColor.value) {
-      currentColor.value = colorPallet.value[0];
-    }
-    const index = colorPallet.value.indexOf(colorCode);
+    const index = colorPallet.value!.indexOf(colorCode);
     if (index !== -1) {
-      colorPallet.value.splice(index, 1);
+      colorPallet.value!.splice(index, 1);
     }
-    saveColorToLocalStorage(colorPallet.value);
+    if (colorCode === currentColor.value) {
+      currentColor.value = colorPallet.value![0];
+    }
+    saveColorToLocalStorage(colorPallet.value!);
   };
   const saveColorToLocalStorage = (colorPallet: string[]) => {
     localStorage.setItem("colorPallet", JSON.stringify(colorPallet));

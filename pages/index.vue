@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { useColor, colorToInt } from "~/composabels/colors"
 
-const canvas = ref();
-const preview = ref();
+const canvas = ref<HTMLCanvasElement | null>(null);
+const preview = ref<HTMLCanvasElement | null>(null);
 const isClicked = ref(false);
 const canvasSize = 656;
 const previewSize = 158;
 const pixelSize = ref(32);
 const dotSize = ref(16);
-const coords = ref();
+const coords = ref<{ x: number; y: number } | null>(null);
 const mode = ref("pen");
 const visibleGrid = ref(false);
-const pixels = ref();
+const pixels = ref<Uint32Array | null>(null);
 const previousCol = ref(0);
 const previousRow = ref(0);
-const startCol = ref(null);
-const startRow = ref(null);
-const undoPixelsStates = ref([]);
-const redoPixelsStates = ref([]);
+const startCol = ref<number | null>(null);
+const startRow = ref<number | null>(null);
+const undoPixelsStates = ref<ImageData[]>([]);
+const redoPixelsStates = ref<ImageData[]>([]);
 const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
 
@@ -25,13 +25,13 @@ const { isMobile } = useDevice();
 const { currentColor, colorPallet, visibleColorPicker, pickedColor, addColor, saveColor, removeColor, loadColorFromLocalStorage } = useColor()
 
 const init = () => {
-  const context = canvas.value.getContext("2d");
-  context.imageSmoothingEnabled = false;
-  context.scale(canvasSize / pixelSize.value, canvasSize / pixelSize.value);
-  const previewContext = preview.value.getContext("2d");
-  previewContext.imageSmoothingEnabled = false;
+  const context = canvas.value!.getContext("2d");
+  context!.imageSmoothingEnabled = false;
+  context!.scale(canvasSize / pixelSize.value, canvasSize / pixelSize.value);
+  const previewContext = preview.value!.getContext("2d");
+  previewContext!.imageSmoothingEnabled = false;
   const scale = (pixelSize.value * dotSize.value) / previewSize;
-  previewContext.scale(dotSize.value / scale, dotSize.value / scale);
+  previewContext!.scale(dotSize.value / scale, dotSize.value / scale);
   // localStrage
   const storedPixels = localStorage.getItem("pixels");
   if (storedPixels) {
@@ -47,12 +47,13 @@ const init = () => {
   } else {
     colorPallet.value = ["#ff0000"];
   }
+  currentColor.value = colorPallet.value![0]
   const imageData = uint32ArrayToImageData(
     pixels.value,
     pixelSize.value,
     pixelSize.value
   );
-  undoPixelsStates.value.push(imageData);
+  undoPixelsStates.value.push(imageData!);
 };
 
 onMounted(() => {
@@ -114,8 +115,8 @@ const onCanvasMouseup = () => {
     pixelSize.value
   );
   if (containsPixel(startCol.value!, startRow.value!)) {
-    undoPixelsStates.value.push(imageData);
-    localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
+    undoPixelsStates.value.push(imageData!);
+    localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value!)));
   }
   startCol.value = null;
   startRow.value = null;
@@ -137,7 +138,7 @@ const onMouseleave = () => {
 
 // ピクセル座標を返す
 const getRelativeCoordinates = (x: number, y: number) => {
-  const canvasRect = canvas.value.getBoundingClientRect();
+  const canvasRect = canvas.value!.getBoundingClientRect();
   return {
     x: Math.floor((x - canvasRect.left) / (canvasSize / pixelSize.value)),
     y: Math.floor((y - canvasRect.top) / (canvasSize / pixelSize.value)),
@@ -146,7 +147,7 @@ const getRelativeCoordinates = (x: number, y: number) => {
 
 const drawAt = (x: number, y: number) => {
   if (containsPixel(x, y)) {
-    setPixelColor(x, y, colorToInt(currentColor.value));
+    setPixelColor(x, y, colorToInt(currentColor.value!));
     renderPixel();
     redoPixelsStates.value = [];
   }
@@ -160,7 +161,7 @@ const fillAt = (x: number, y: number) => {
     };
     visitConnectedPixels(startPixel, (pixle: any) => {
       if (getPixelColor(pixle.col, pixle.row) === originalColor.value) {
-        setPixelColor(pixle.col, pixle.row, colorToInt(currentColor.value));
+        setPixelColor(pixle.col, pixle.row, colorToInt(currentColor.value!));
         return true;
       } else {
         return false;
@@ -185,14 +186,14 @@ const hoverAt = (x: number, y: number) => {
     // 新しい座標の色を変更する
     originalColor.value = getPixelColor(x, y);
     originalCoords.value = { x, y };
-    setPixelColor(x, y, colorToInt(currentColor.value));
+    setPixelColor(x, y, colorToInt(currentColor.value!));
     renderPixel();
   }
 };
 
 // ピクセルを描画する
 const renderPixel = () => {
-  const context = canvas.value.getContext("2d");
+  const context = canvas.value!.getContext("2d");
   const offscreenCanvas = document.createElement("canvas");
   const offscreenContext = offscreenCanvas.getContext("2d");
   offscreenCanvas.width = pixelSize.value;
@@ -202,13 +203,13 @@ const renderPixel = () => {
     pixelSize.value
   );
   const imgDataData = imageData?.data;
-  const data = new Uint8ClampedArray(pixels.value.buffer);
+  const data = new Uint8ClampedArray(pixels.value!.buffer);
   imgDataData?.set(data);
   offscreenContext?.putImageData(imageData!, 0, 0);
-  context.clearRect(0, 0, pixelSize.value, pixelSize.value);
-  context.save();
-  context.drawImage(offscreenCanvas, 0, 0);
-  context.restore();
+  context!.clearRect(0, 0, pixelSize.value, pixelSize.value);
+  context!.save();
+  context!.drawImage(offscreenCanvas, 0, 0);
+  context!.restore();
   if (visibleGrid.value) {
     addGrid();
   }
@@ -217,11 +218,11 @@ const renderPixel = () => {
 
 const renderPreview = () => {
   const offscreenCanvas = renderPixel();
-  const previewContext = preview.value.getContext("2d");
-  previewContext.clearRect(0, 0, pixelSize.value, pixelSize.value);
-  previewContext.save();
-  previewContext.drawImage(offscreenCanvas, 0, 0);
-  previewContext.restore();
+  const previewContext = preview.value!.getContext("2d");
+  previewContext!.clearRect(0, 0, pixelSize.value, pixelSize.value);
+  previewContext!.save();
+  previewContext!.drawImage(offscreenCanvas, 0, 0);
+  previewContext!.restore();
 };
 
 const undo = () => {
@@ -267,7 +268,7 @@ const downloadImage = () => {
     return;
   }
   const link = document.createElement("a");
-  link.href = canvas.value.toDataURL();
+  link.href = canvas.value!.toDataURL();
   link.download = fileName + ".png";
   link.click();
   if (visibleGridState) {
@@ -348,7 +349,7 @@ const visitConnectedPixels = (pixel: any, pixelVisitor: any) => {
 
 const getPixelColor = (x: number, y: number) => {
   if (containsPixel(x, y)) {
-    return pixels.value[y * pixelSize.value + x];
+    return pixels.value![y * pixelSize.value + x];
   } else {
     return null;
   }
@@ -357,7 +358,7 @@ const getPixelColor = (x: number, y: number) => {
 const setPixelColor = (x: number, y: number, color: number) => {
   if (containsPixel(x, y)) {
     const index = y * pixelSize.value + x;
-    pixels.value[index] = color;
+    pixels.value![index] = color;
   }
 };
 
@@ -369,22 +370,22 @@ const containsPixel = (col: number, row: number) => {
 };
 
 const addGrid = () => {
-  const context = canvas.value.getContext("2d");
-  context.strokeStyle = "rgba(0, 0, 0, 1)";
-  context.lineWidth = 1 / 64;
+  const context = canvas.value!.getContext("2d");
+  context!.strokeStyle = "rgba(0, 0, 0, 1)";
+  context!.lineWidth = 1 / 64;
 
   for (let x = 1; x < pixelSize.value; x += 1) {
-    context.beginPath();
-    context.moveTo(x, 0);
-    context.lineTo(x, pixelSize.value);
-    context.stroke();
+    context!.beginPath();
+    context!.moveTo(x, 0);
+    context!.lineTo(x, pixelSize.value);
+    context!.stroke();
   }
 
   for (let y = 1; y < pixelSize.value; y += 1) {
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(pixelSize.value, y);
-    context.stroke();
+    context!.beginPath();
+    context!.moveTo(0, y);
+    context!.lineTo(pixelSize.value, y);
+    context!.stroke();
   }
 };
 
@@ -404,7 +405,7 @@ const clear = () => {
     pixelSize.value,
     pixelSize.value
   );
-  undoPixelsStates.value.push(imageData);
+  undoPixelsStates.value.push(imageData!);
   localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
   originalColor.value = null;
   originalCoords.value = null;
@@ -446,11 +447,11 @@ const changeSize = (number: number) => {
     "dotSize.value"
   );
   clear();
-  const context = canvas.value.getContext("2d");
-  const initialTransform = context.getTransform();
-  context.setTransform(initialTransform);
-  const previewContext = preview.value.getContext("2d");
-  previewContext.setTransform(initialTransform);
+  const context = canvas.value!.getContext("2d");
+  const initialTransform = context!.getTransform();
+  context!.setTransform(initialTransform);
+  const previewContext = preview.value!.getContext("2d");
+  previewContext!.setTransform(initialTransform);
   init();
 };
 </script>
@@ -570,7 +571,7 @@ const changeSize = (number: number) => {
               :style="{ backgroundColor: color }"
             >
               <button
-                v-show="colorPallet.length > 1"
+                v-show="colorPallet!.length > 1"
                 class="color-delete-btn absolute w-5 h-5 leading-none bg-[#fffffe] rounded-full -top-2 -left-2 border-2 border-solid border-[#2b2c34]"
                 @click="removeColor(color)"
               >
