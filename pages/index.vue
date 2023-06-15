@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useColor, colorToInt } from "~/composabels/colors"
+
 const canvas = ref();
 const preview = ref();
 const isClicked = ref(false);
@@ -7,7 +9,6 @@ const previewSize = 158;
 const pixelSize = ref(32);
 const dotSize = ref(16);
 const coords = ref();
-const currentColor = ref("#ff0000");
 const mode = ref("pen");
 const visibleGrid = ref(false);
 const pixels = ref();
@@ -19,9 +20,9 @@ const undoPixelsStates = ref([]);
 const redoPixelsStates = ref([]);
 const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
-const colorPallet = ref(["#ff0000"]);
 
 const { isMobile } = useDevice();
+const { currentColor, colorPallet, visibleColorPicker, pickedColor, addColor, saveColor, removeColor, loadColorFromLocalStorage } = useColor()
 
 const init = () => {
   const context = canvas.value.getContext("2d");
@@ -191,36 +192,23 @@ const hoverAt = (x: number, y: number) => {
 
 // ピクセルを描画する
 const renderPixel = () => {
-  // コンテキスト取得
   const context = canvas.value.getContext("2d");
-  // offscreenCanvasを作成
   const offscreenCanvas = document.createElement("canvas");
-  // コンテキスト取得
   const offscreenContext = offscreenCanvas.getContext("2d");
-  // width height を設定
   offscreenCanvas.width = pixelSize.value;
   offscreenCanvas.height = pixelSize.value;
-  // imageDataを作成(width・height・dataが入っている)
   const imageData = offscreenContext?.createImageData(
     pixelSize.value,
     pixelSize.value
   );
-  // imageData.dataをimgDataDataに代入
   const imgDataData = imageData?.data;
-  // pixels.value.bufferをUint8ClampedArrayの形式でdataに代入
   const data = new Uint8ClampedArray(pixels.value.buffer);
-  // imgDataDataにdataをコピー
   imgDataData?.set(data);
-  // imageDataをoffscreenContextに反映
   offscreenContext?.putImageData(imageData!, 0, 0);
-  // コンテキストをクリアにする
   context.clearRect(0, 0, pixelSize.value, pixelSize.value);
-  // 描画の状態をスタックに保存している
   context.save();
-  // offscreenCanvasの内容をキャンバスコンテキストに描画している
   context.drawImage(offscreenCanvas, 0, 0);
   context.restore();
-  // grid
   if (visibleGrid.value) {
     addGrid();
   }
@@ -229,7 +217,6 @@ const renderPixel = () => {
 
 const renderPreview = () => {
   const offscreenCanvas = renderPixel();
-  // preview
   const previewContext = preview.value.getContext("2d");
   previewContext.clearRect(0, 0, pixelSize.value, pixelSize.value);
   previewContext.save();
@@ -311,13 +298,12 @@ const uint32ArrayToImageData = (array, width: number, height: number) => {
   const imageData = context?.createImageData(width, height);
   const data = imageData?.data;
 
-  // Uint32Array のデータを ImageData のデータにコピーする
   for (let i = 0, j = 0; i < array.length; i++, j += 4) {
     const pixel = array[i];
-    data![j] = pixel & 0xff; // Red コンポーネント
-    data![j + 1] = (pixel >> 8) & 0xff; // Green コンポーネント
-    data![j + 2] = (pixel >> 16) & 0xff; // Blue コンポーネント
-    data![j + 3] = (pixel >> 24) & 0xff; // Alpha コンポーネント
+    data![j] = pixel & 0xff;
+    data![j + 1] = (pixel >> 8) & 0xff;
+    data![j + 2] = (pixel >> 16) & 0xff;
+    data![j + 3] = (pixel >> 24) & 0xff;
   }
 
   return imageData;
@@ -352,7 +338,6 @@ const visitConnectedPixels = (pixel: any, pixelVisitor: any) => {
         // Frame out of bound exception.
       }
     }
-    // Security loop breaker:
     if (loopCount.value > 10 * cellCount) {
       console.log("loop breaker called");
       break;
@@ -361,7 +346,6 @@ const visitConnectedPixels = (pixel: any, pixelVisitor: any) => {
   return visitedPixels;
 };
 
-// ピクセルカラーを取得する
 const getPixelColor = (x: number, y: number) => {
   if (containsPixel(x, y)) {
     return pixels.value[y * pixelSize.value + x];
@@ -370,7 +354,6 @@ const getPixelColor = (x: number, y: number) => {
   }
 };
 
-// ピクセルカラーを設定する
 const setPixelColor = (x: number, y: number, color: number) => {
   if (containsPixel(x, y)) {
     const index = y * pixelSize.value + x;
@@ -378,7 +361,6 @@ const setPixelColor = (x: number, y: number, color: number) => {
   }
 };
 
-// キャンバスないか判定する
 const containsPixel = (col: number, row: number) => {
   if (col === null || row === null) {
     return false;
@@ -387,12 +369,10 @@ const containsPixel = (col: number, row: number) => {
 };
 
 const addGrid = () => {
-  // 既存のキャンバスに罫線を描画する関数
   const context = canvas.value.getContext("2d");
   context.strokeStyle = "rgba(0, 0, 0, 1)";
   context.lineWidth = 1 / 64;
 
-  // 横の罫線を描画
   for (let x = 1; x < pixelSize.value; x += 1) {
     context.beginPath();
     context.moveTo(x, 0);
@@ -400,7 +380,6 @@ const addGrid = () => {
     context.stroke();
   }
 
-  // 縦の罫線を描画
   for (let y = 1; y < pixelSize.value; y += 1) {
     context.beginPath();
     context.moveTo(0, y);
@@ -434,8 +413,6 @@ const clear = () => {
 
 const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
   const pixels = [];
-  // x1 = normalize(x1, 0);
-  // y1 = normalize(y1, 0);
   const dx = Math.abs(x1 - x0);
   const dy = Math.abs(y1 - y0);
   const sx = x0 < x1 ? 1 : -1;
@@ -459,42 +436,6 @@ const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
   return pixels;
 };
 
-const colorToInt = (color: string, alpha: number = 255) => {
-  const hex = color.replace("#", "");
-  const red = parseInt(hex.substr(0, 2), 16);
-  const green = parseInt(hex.substr(2, 2), 16);
-  const blue = parseInt(hex.substr(4, 2), 16);
-  const colorInt = ((alpha << 24) >>> 0) + (blue << 16) + (green << 8) + red;
-  return colorInt;
-};
-
-const visibleModal = ref(false);
-const pickedColor = ref("#000000");
-const addColor = () => {
-  visibleModal.value = true;
-};
-const saveColor = () => {
-  if (pickedColor.value && !colorPallet.value.includes(pickedColor.value)) {
-    colorPallet.value.push(pickedColor.value);
-    saveColorToLocalStorage(colorPallet.value);
-  }
-  if (pickedColor.value) {
-    currentColor.value = pickedColor.value;
-  }
-  visibleModal.value = false;
-};
-
-const removeColor = (colorCode: string) => {
-  if (colorCode === currentColor.value) {
-    currentColor.value = colorPallet.value[0];
-  }
-  const index = colorPallet.value.indexOf(colorCode);
-  if (index !== -1) {
-    colorPallet.value.splice(index, 1);
-  }
-  saveColorToLocalStorage(colorPallet.value);
-};
-
 const changeSize = (number: number) => {
   pixelSize.value = number;
   dotSize.value = canvasSize / pixelSize.value;
@@ -511,15 +452,6 @@ const changeSize = (number: number) => {
   const previewContext = preview.value.getContext("2d");
   previewContext.setTransform(initialTransform);
   init();
-};
-
-const saveColorToLocalStorage = (colorPallet) => {
-  localStorage.setItem("colorPallet", JSON.stringify(colorPallet));
-};
-
-const loadColorFromLocalStorage = () => {
-  const storedColorPallet = localStorage.getItem("colorPallet");
-  return storedColorPallet ? JSON.parse(storedColorPallet) : [];
 };
 </script>
 
@@ -665,9 +597,13 @@ const loadColorFromLocalStorage = () => {
               />
             </label>
           </div>
-          <input type="color" v-model="pickedColor" v-show="visibleModal" />
+          <input
+            type="color"
+            v-model="pickedColor"
+            v-show="visibleColorPicker"
+          />
           <button
-            v-if="visibleModal"
+            v-if="visibleColorPicker"
             @click="saveColor"
             class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
           >
