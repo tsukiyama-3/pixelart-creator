@@ -5,6 +5,7 @@ export default defineNuxtConfig({
     preset: "firebase",
   },
   css: ["~/assets/css/main.css"],
+  modules: ["@nuxtjs/device"],
   postcss: {
     plugins: {
       tailwindcss: {},

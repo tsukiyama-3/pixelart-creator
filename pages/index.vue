@@ -21,6 +21,8 @@ const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
 const colorPallet = ref(["#ff0000"]);
 
+const { isMobile } = useDevice();
+
 const init = () => {
   const context = canvas.value.getContext("2d");
   context.imageSmoothingEnabled = false;
@@ -531,8 +533,8 @@ const loadColorFromLocalStorage = () => {
     @keydown.g="toggleGrid"
     @keydown.p="mode = 'pen'"
     @keydown.b="mode = 'bucket'"
-    @keydown.left="undo"
-    @keydown.right="redo"
+    @keydown.z="undo"
+    @keydown.x="redo"
     tabindex="0"
   >
     <div class="grid grid-cols-[656px_auto] gap-8">
@@ -699,7 +701,7 @@ const loadColorFromLocalStorage = () => {
               :disabled="undoPixelsStates.length <= 1"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip"
             >
-              <span class="tooltip-text opacity-0">Undo (←)</span>
+              <span class="tooltip-text opacity-0">Undo (Z)</span>
               <img
                 src="~/assets/arrow_back.svg"
                 :class="{ 'opacity-30': undoPixelsStates.length <= 1 }"
@@ -722,7 +724,7 @@ const loadColorFromLocalStorage = () => {
               :disabled="redoPixelsStates.length <= 0"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip"
             >
-              <span class="tooltip-text opacity-0">Redo (→)</span>
+              <span class="tooltip-text opacity-0">Redo (X)</span>
               <img
                 src="~/assets/arrow_next.svg"
                 :class="{ 'opacity-30': redoPixelsStates.length <= 0 }"
