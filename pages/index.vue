@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useColor, colorToInt } from "~/composabels/colors"
+import { useColor, colorToInt } from "~/composabels/colors";
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const preview = ref<HTMLCanvasElement | null>(null);
 const isClicked = ref(false);
 const canvasSize = 656;
-const previewSize = 158;
+const previewSize = ref(158);
 const pixelSize = ref(32);
 const dotSize = ref(16);
 const coords = ref<{ x: number; y: number } | null>(null);
@@ -22,15 +22,30 @@ const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
 
 const { isMobile } = useDevice();
-const { currentColor, colorPallet, visibleColorPicker, pickedColor, addColor, saveColor, removeColor, loadColorFromLocalStorage } = useColor()
+const {
+  currentColor,
+  colorPallet,
+  visibleColorPicker,
+  pickedColor,
+  addColor,
+  saveColor,
+  removeColor,
+  loadColorFromLocalStorage,
+} = useColor();
 
 const init = () => {
+  if (localStorage.getItem("pixelSize")) {
+    pixelSize.value = Number(localStorage.getItem("pixelSize"));
+  }
+  if (localStorage.getItem("dotSize")) {
+    dotSize.value = Number(localStorage.getItem("dotSize"));
+  }
   const context = canvas.value!.getContext("2d");
   context!.imageSmoothingEnabled = false;
   context!.scale(canvasSize / pixelSize.value, canvasSize / pixelSize.value);
   const previewContext = preview.value!.getContext("2d");
   previewContext!.imageSmoothingEnabled = false;
-  const scale = (pixelSize.value * dotSize.value) / previewSize;
+  const scale = (pixelSize.value * dotSize.value) / previewSize.value;
   previewContext!.scale(dotSize.value / scale, dotSize.value / scale);
   // localStrage
   const storedPixels = localStorage.getItem("pixels");
@@ -47,7 +62,7 @@ const init = () => {
   } else {
     colorPallet.value = ["#ff0000"];
   }
-  currentColor.value = colorPallet.value![0]
+  currentColor.value = colorPallet.value![0];
   const imageData = uint32ArrayToImageData(
     pixels.value,
     pixelSize.value,
@@ -410,6 +425,7 @@ const clear = () => {
   originalColor.value = null;
   originalCoords.value = null;
   renderPixel();
+  renderPreview();
 };
 
 const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
@@ -438,22 +454,35 @@ const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
 };
 
 const changeSize = (number: number) => {
+  const confirmed = window.confirm(`Do you want to change the canvas size to ${number}x${number}?`);
+  if (!confirmed) {
+    return
+  }
+  const originalCanvasScale = canvasSize / pixelSize.value;
+  const originalPreviewScale =
+    dotSize.value / ((pixelSize.value * dotSize.value) / previewSize.value);
   pixelSize.value = number;
   dotSize.value = canvasSize / pixelSize.value;
-  console.log(
-    pixelSize.value,
-    "pixelSize.value",
-    dotSize.value,
-    "dotSize.value"
-  );
-  clear();
   const context = canvas.value!.getContext("2d");
-  const initialTransform = context!.getTransform();
-  context!.setTransform(initialTransform);
+  context!.scale(1 / originalCanvasScale, 1 / originalCanvasScale);
   const previewContext = preview.value!.getContext("2d");
-  previewContext!.setTransform(initialTransform);
+  previewContext!.scale(1 / originalPreviewScale, 1 / originalPreviewScale);
+  localStorage.removeItem("pixels");
+  localStorage.setItem("pixelSize", pixelSize.value.toString());
+  localStorage.setItem("dotSize", dotSize.value.toString());
   init();
+  undoPixelsStates.value = [];
+  redoPixelsStates.value = [];
+  clear();
 };
+
+const clearCanvas = () => {
+  const confirmed = window.confirm('Do you want to clear the canvas?');
+  if (!confirmed) {
+    return
+  }
+  clear();
+}
 </script>
 
 <template>
@@ -672,21 +701,50 @@ const changeSize = (number: number) => {
             </button>
           </div>
         </div>
-        <!-- <div class="flex space-x-2">
+        <div class="flex space-x-2">
           <div>
             <button
               @click="changeSize(64)"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :class="{ 'bg-[#2b2c34]': pixelSize === 64 }"
             >
-              <img
-                src="~/assets/64x64.svg"
-                width="40"
-                height="40"
-                alt="pen-icon"
-              />
+              <p
+                class="text-xs font-bold text-[#2b2c34]"
+                :class="{ 'text-[#fffffe]': pixelSize === 64 }"
+              >
+                64x64
+              </p>
             </button>
           </div>
-        </div> -->
+          <div>
+            <button
+              @click="changeSize(32)"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :class="{ 'bg-[#2b2c34]': pixelSize === 32 }"
+            >
+              <p
+                class="text-xs font-bold text-[#2b2c34]"
+                :class="{ 'text-[#fffffe]': pixelSize === 32 }"
+              >
+                32x32
+              </p>
+            </button>
+          </div>
+          <div>
+            <button
+              @click="changeSize(16)"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              :class="{ 'bg-[#2b2c34]': pixelSize === 16 }"
+            >
+              <p
+                class="text-xs font-bold text-[#2b2c34]"
+                :class="{ 'text-[#fffffe]': pixelSize === 16 }"
+              >
+                16x16
+              </p>
+            </button>
+          </div>
+        </div>
         <div class="flex space-x-2">
           <div>
             <button
@@ -704,7 +762,7 @@ const changeSize = (number: number) => {
           </div>
           <div>
             <button
-              @click="clear"
+              @click="clearCanvas"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
             >
               <span class="tooltip-text opacity-0">Clear Canvas</span>
