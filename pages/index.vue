@@ -628,37 +628,40 @@ const clearCanvas = () => {
               />
             </label>
           </div>
-          <input
-            type="color"
-            v-model="pickedColor"
-            v-show="visibleColorPicker"
-          />
-          <button
-            v-if="visibleColorPicker"
-            @click="saveColor"
-            class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
-          >
-            <span class="tooltip-text">Save Color</span>
-            <img
-              src="~/assets/done.svg"
-              width="32"
-              height="32"
-              alt="pen-icon"
-            />
-          </button>
-          <div v-else>
-            <button
-              @click="addColor"
+          <div>
+            <label
+              v-if="!visibleColorPicker"
+              for="color-picker"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
-            >
-              <span class="tooltip-text">Add Color</span>
+              :style="{ backgroundColor: pickedColor }"
+              >
               <img
                 src="~/assets/add.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
               />
+            </label>
+            <button
+              v-else
+              @click="saveColor"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              :style="{ backgroundColor: pickedColor }"
+            >
+              <img
+                src="~/assets/check.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
             </button>
+            <input
+              type="color"
+              v-model="pickedColor"
+              @click="addColor"
+              class="absolute opacity-0"
+              id="color-picker"
+            />
           </div>
         </div>
         <div class="flex space-x-2">
@@ -790,12 +793,12 @@ const clearCanvas = () => {
   cursor: url("assets/fill-cursor.svg") 12 12, default;
 }
 
-input[type="color"] {
+.color-picker {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
   display: block;
-  margin: 0;
+  margin: -4px 0 0 -2px;
   width: 44px;
   height: 48px;
   padding: 0;
@@ -804,9 +807,12 @@ input[type="color"] {
   cursor: pointer;
 }
 
-input[type="color"]::-webkit-color-swatch {
-  border-radius: 50%;
+.color-picker::-webkit-color-swatch {
+  border-radius: 6px;
   border: 2px solid #2b2c34;
+  min-width: 44px;
+  min-height: 44px;
+  background-image: url("assets/add.svg");
 }
 
 .color-label:hover .color-delete-btn {

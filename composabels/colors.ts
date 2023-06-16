@@ -2,7 +2,7 @@ export const useColor = () => {
   const currentColor = ref<string | null>(null);
   const colorPallet = ref<string[] | null>([]);
   const visibleColorPicker = ref(false);
-  const pickedColor = ref("#000000");
+  const pickedColor = ref("#ffffff");
   const addColor = () => {
     visibleColorPicker.value = true;
   };
@@ -14,6 +14,7 @@ export const useColor = () => {
     if (pickedColor.value) {
       currentColor.value = pickedColor.value;
     }
+    pickedColor.value = "#ffffff";
     visibleColorPicker.value = false;
   };
   const removeColor = (colorCode: string) => {
