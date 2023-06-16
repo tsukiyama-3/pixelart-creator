@@ -543,7 +543,7 @@ const clearCanvas = () => {
           <div class="flex space-x-2">
             <label
               for="pen"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
               :class="{ 'bg-[#2b2c34]': mode === 'pen' }"
             >
               <span class="tooltip-text">Pen (P)</span>
@@ -556,7 +556,7 @@ const clearCanvas = () => {
             </label>
             <label
               for="bucket"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
               :class="{ 'bg-[#2b2c34]': mode === 'bucket' }"
             >
               <span class="tooltip-text">Bucket (B)</span>
@@ -571,7 +571,7 @@ const clearCanvas = () => {
             <div>
               <button
                 @click="toggleGrid"
-                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
                 :class="{ 'bg-[#2b2c34]': visibleGrid }"
               >
                 <span class="tooltip-text">Grid (G)</span>
@@ -585,7 +585,10 @@ const clearCanvas = () => {
             </div>
           </div>
         </div>
-        <div class="grid grid-cols-[repeat(8,minmax(48px,48px))] gap-2">
+        <div
+          class="grid grid-cols-[repeat(8,minmax(48px,48px))] gap-2 max-h-[266px]"
+          :class="{ 'overflow-x-visible overflow-y-scroll' : colorPallet!.length > 31 }"
+        >
           <div v-for="color in colorPallet">
             <input
               type="radio"
@@ -633,8 +636,7 @@ const clearCanvas = () => {
               v-if="!visibleColorPicker"
               for="color-picker"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
-              :style="{ backgroundColor: pickedColor }"
-              >
+            >
               <img
                 src="~/assets/add.svg"
                 width="32"
@@ -709,7 +711,7 @@ const clearCanvas = () => {
           <div>
             <button
               @click="changeSize(64)"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition"
               :class="{ 'bg-[#2b2c34]': pixelSize === 64 }"
             >
               <p
@@ -723,7 +725,7 @@ const clearCanvas = () => {
           <div>
             <button
               @click="changeSize(32)"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition"
               :class="{ 'bg-[#2b2c34]': pixelSize === 32 }"
             >
               <p
@@ -737,7 +739,7 @@ const clearCanvas = () => {
           <div>
             <button
               @click="changeSize(16)"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition"
               :class="{ 'bg-[#2b2c34]': pixelSize === 16 }"
             >
               <p
@@ -843,12 +845,16 @@ const clearCanvas = () => {
   background: #2b2c34;
   color: #fff;
   border-radius: 3px;
-  transition: 0.3s ease-in;
+  transition: 0.2s ease-in;
   z-index: 10;
 }
 
 .tooltip:hover .tooltip-text {
   opacity: 1;
   visibility: visible;
+}
+
+.transition {
+  transition: 0.2s ease-in;
 }
 </style>

@@ -14,7 +14,6 @@ export const useColor = () => {
     if (pickedColor.value) {
       currentColor.value = pickedColor.value;
     }
-    pickedColor.value = "#ffffff";
     visibleColorPicker.value = false;
   };
   const removeColor = (colorCode: string) => {
