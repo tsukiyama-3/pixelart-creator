@@ -21,7 +21,6 @@ const redoPixelsStates = ref<ImageData[]>([]);
 const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
 
-const { isMobile } = useDevice();
 const {
   currentColor,
   colorPallet,
@@ -454,9 +453,11 @@ const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
 };
 
 const changeSize = (number: number) => {
-  const confirmed = window.confirm(`Do you want to change the canvas size to ${number}x${number}?`);
+  const confirmed = window.confirm(
+    `Do you want to change the canvas size to ${number}x${number}?`
+  );
   if (!confirmed) {
-    return
+    return;
   }
   const originalCanvasScale = canvasSize / pixelSize.value;
   const originalPreviewScale =
@@ -477,12 +478,12 @@ const changeSize = (number: number) => {
 };
 
 const clearCanvas = () => {
-  const confirmed = window.confirm('Do you want to clear the canvas?');
+  const confirmed = window.confirm("Do you want to clear the canvas?");
   if (!confirmed) {
-    return
+    return;
   }
   clear();
-}
+};
 </script>
 
 <template>
