@@ -11,9 +11,10 @@ const { isDesktop } = useDevice();
         </h1>
       </header>
       <slot v-if="isDesktop" />
-      <div v-else class="grow px-4 text-xl text-[#2b2c34]">
-        We apologize, but the current service is recommended for use on a PC
-        browser. Please try accessing it from a PC.
+      <div v-else class="grow flex items-center justify-center px-4 text-xl text-[#2b2c34]">
+        <p class="text-xl font-semibold">
+          We apologize, but the current service is recommended for use on a PC browser. Please try accessing it from a PC.
+        </p>
       </div>
       <footer class="max-w-[1128px] w-full mx-auto py-2">
         <p class="text-center text-sm text-[#2b2c34] opacity-80">
