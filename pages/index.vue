@@ -4,7 +4,7 @@ import { useColor, colorToInt } from "~/composabels/colors";
 const canvas = ref<HTMLCanvasElement | null>(null);
 const preview = ref<HTMLCanvasElement | null>(null);
 const isClicked = ref(false);
-const canvasSize = 656;
+const canvasSize = ref(656);
 const previewSize = ref(158);
 const pixelSize = ref(32);
 const dotSize = ref(16);
@@ -39,13 +39,7 @@ const init = () => {
   if (localStorage.getItem("dotSize")) {
     dotSize.value = Number(localStorage.getItem("dotSize"));
   }
-  const context = canvas.value!.getContext("2d");
-  context!.imageSmoothingEnabled = false;
-  context!.scale(canvasSize / pixelSize.value, canvasSize / pixelSize.value);
-  const previewContext = preview.value!.getContext("2d");
-  previewContext!.imageSmoothingEnabled = false;
-  const scale = (pixelSize.value * dotSize.value) / previewSize.value;
-  previewContext!.scale(dotSize.value / scale, dotSize.value / scale);
+  scaleCanvas()
   // localStrage
   const storedPixels = localStorage.getItem("pixels");
   if (storedPixels) {
@@ -73,6 +67,16 @@ const init = () => {
 onMounted(() => {
   init();
 });
+
+const scaleCanvas = () => {
+  const context = canvas.value!.getContext("2d");
+  context!.imageSmoothingEnabled = false;
+  context!.scale(canvasSize.value / pixelSize.value, canvasSize.value / pixelSize.value);
+  const previewContext = preview.value!.getContext("2d");
+  previewContext!.imageSmoothingEnabled = false;
+  const scale = (pixelSize.value * dotSize.value) / previewSize.value;
+  previewContext!.scale(dotSize.value / scale, dotSize.value / scale);
+}
 
 const onCanvasMousemove = (event: MouseEvent) => {
   coords.value = getRelativeCoordinates(event.clientX, event.clientY);
@@ -154,8 +158,8 @@ const onMouseleave = () => {
 const getRelativeCoordinates = (x: number, y: number) => {
   const canvasRect = canvas.value!.getBoundingClientRect();
   return {
-    x: Math.floor((x - canvasRect.left) / (canvasSize / pixelSize.value)),
-    y: Math.floor((y - canvasRect.top) / (canvasSize / pixelSize.value)),
+    x: Math.floor((x - canvasRect.left) / (canvasSize.value / pixelSize.value)),
+    y: Math.floor((y - canvasRect.top) / (canvasSize.value / pixelSize.value)),
   };
 };
 
@@ -281,10 +285,18 @@ const downloadImage = () => {
     }
     return;
   }
+  canvasSize.value = 256;
+  canvas.value!.width = 256;
+  canvas.value!.height = 256;
+  init();
   const link = document.createElement("a");
   link.href = canvas.value!.toDataURL();
   link.download = fileName + ".png";
   link.click();
+  canvasSize.value = 656
+  canvas.value!.width = 656;
+  canvas.value!.height = 656;
+  init();
   if (visibleGridState) {
     visibleGrid.value = true;
     renderPixel();
@@ -459,11 +471,11 @@ const changeSize = (number: number) => {
   if (!confirmed) {
     return;
   }
-  const originalCanvasScale = canvasSize / pixelSize.value;
+  const originalCanvasScale = canvasSize.value / pixelSize.value;
   const originalPreviewScale =
     dotSize.value / ((pixelSize.value * dotSize.value) / previewSize.value);
   pixelSize.value = number;
-  dotSize.value = canvasSize / pixelSize.value;
+  dotSize.value = canvasSize.value / pixelSize.value;
   const context = canvas.value!.getContext("2d");
   context!.scale(1 / originalCanvasScale, 1 / originalCanvasScale);
   const previewContext = preview.value!.getContext("2d");
@@ -684,7 +696,7 @@ const clearCanvas = () => {
             </button>
           </div>
           <div
-            class="text-2xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]"
+            class="text-xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]"
           >
             <ClientOnly>
               {{ undoPixelsStates.length - 1 }}
