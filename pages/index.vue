@@ -20,6 +20,10 @@ const undoPixelsStates = ref<ImageData[]>([]);
 const redoPixelsStates = ref<ImageData[]>([]);
 const originalColor = ref<number | null>(null);
 const originalCoords = ref<{ x: number; y: number } | null>(null);
+const visibleModal = ref(false);
+const confirmCanvas = ref<HTMLCanvasElement | null>(null);
+const imageSize = ref("256");
+const imageName = ref("");
 
 const {
   currentColor,
@@ -39,13 +43,13 @@ const init = () => {
   if (localStorage.getItem("dotSize")) {
     dotSize.value = Number(localStorage.getItem("dotSize"));
   }
-  scaleCanvas()
+  scaleCanvas();
   // localStrage
   const storedPixels = localStorage.getItem("pixels");
   if (storedPixels) {
+    const previreContext = preview.value?.getContext("2d");
     pixels.value = new Uint32Array(JSON.parse(storedPixels));
-    renderPixel();
-    renderPreview();
+    renderPreview(previreContext);
   } else {
     pixels.value = new Uint32Array(pixelSize.value * pixelSize.value);
   }
@@ -71,12 +75,18 @@ onMounted(() => {
 const scaleCanvas = () => {
   const context = canvas.value!.getContext("2d");
   context!.imageSmoothingEnabled = false;
-  context!.scale(canvasSize.value / pixelSize.value, canvasSize.value / pixelSize.value);
+  context!.scale(
+    canvasSize.value / pixelSize.value,
+    canvasSize.value / pixelSize.value
+  );
   const previewContext = preview.value!.getContext("2d");
   previewContext!.imageSmoothingEnabled = false;
   const scale = (pixelSize.value * dotSize.value) / previewSize.value;
   previewContext!.scale(dotSize.value / scale, dotSize.value / scale);
-}
+  const confirmCanvasContext = confirmCanvas.value?.getContext("2d");
+  confirmCanvasContext!.imageSmoothingEnabled = false;
+  confirmCanvasContext!.scale(dotSize.value / scale, dotSize.value / scale);
+};
 
 const onCanvasMousemove = (event: MouseEvent) => {
   coords.value = getRelativeCoordinates(event.clientX, event.clientY);
@@ -138,7 +148,8 @@ const onCanvasMouseup = () => {
   }
   startCol.value = null;
   startRow.value = null;
-  renderPreview();
+  const previreContext = preview.value?.getContext("2d");
+  renderPreview(previreContext);
 };
 
 const onMouseleave = () => {
@@ -234,13 +245,14 @@ const renderPixel = () => {
   return offscreenCanvas;
 };
 
-const renderPreview = () => {
+const renderPreview = (
+  context: CanvasRenderingContext2D | null | undefined
+) => {
   const offscreenCanvas = renderPixel();
-  const previewContext = preview.value!.getContext("2d");
-  previewContext!.clearRect(0, 0, pixelSize.value, pixelSize.value);
-  previewContext!.save();
-  previewContext!.drawImage(offscreenCanvas, 0, 0);
-  previewContext!.restore();
+  context!.clearRect(0, 0, pixelSize.value, pixelSize.value);
+  context!.save();
+  context!.drawImage(offscreenCanvas, 0, 0);
+  context!.restore();
 };
 
 const undo = () => {
@@ -251,7 +263,8 @@ const undo = () => {
     originalColor.value = null;
     originalCoords.value = null;
     renderPixel();
-    renderPreview();
+    const previreContext = preview.value?.getContext("2d");
+    renderPreview(previreContext);
     redoPixelsStates.value.push(undoPixelsStates.value.pop()!);
   }
 };
@@ -263,7 +276,8 @@ const redo = () => {
     originalColor.value = null;
     originalCoords.value = null;
     renderPixel();
-    renderPreview();
+    const previreContext = preview.value?.getContext("2d");
+    renderPreview(previreContext);
     undoPixelsStates.value.push(nextState!);
     localStorage.setItem("pixels", JSON.stringify(Array.from(pixels.value)));
   }
@@ -275,25 +289,15 @@ const downloadImage = () => {
     visibleGrid.value = false;
     renderPixel();
   }
-  const fileName = prompt(
-    "Please enter the name for the image you want to save"
-  );
-  if (!fileName) {
-    if (visibleGridState) {
-      visibleGrid.value = true;
-      renderPixel();
-    }
-    return;
-  }
-  canvasSize.value = 256;
-  canvas.value!.width = 256;
-  canvas.value!.height = 256;
+  canvasSize.value = Number(imageSize.value);
+  canvas.value!.width = Number(imageSize.value);
+  canvas.value!.height = Number(imageSize.value);
   init();
   const link = document.createElement("a");
   link.href = canvas.value!.toDataURL();
-  link.download = fileName + ".png";
+  link.download = imageName.value + ".png";
   link.click();
-  canvasSize.value = 656
+  canvasSize.value = 656;
   canvas.value!.width = 656;
   canvas.value!.height = 656;
   init();
@@ -301,6 +305,7 @@ const downloadImage = () => {
     visibleGrid.value = true;
     renderPixel();
   }
+  visibleModal.value = false
 };
 
 const imageDataToUint32Array = (imageData: ImageData) => {
@@ -436,7 +441,8 @@ const clear = () => {
   originalColor.value = null;
   originalCoords.value = null;
   renderPixel();
-  renderPreview();
+  const previreContext = preview.value?.getContext("2d");
+  renderPreview(previreContext);
 };
 
 const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
@@ -495,6 +501,12 @@ const clearCanvas = () => {
     return;
   }
   clear();
+};
+
+const openDownloadModal = () => {
+  visibleModal.value = true;
+  const confirmCanvasContext = confirmCanvas.value?.getContext("2d");
+  renderPreview(confirmCanvasContext);
 };
 </script>
 
@@ -766,7 +778,7 @@ const clearCanvas = () => {
         <div class="flex space-x-2">
           <div>
             <button
-              @click="downloadImage"
+              @click="openDownloadModal"
               class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
             >
               <span class="tooltip-text opacity-0">Download</span>
@@ -796,6 +808,128 @@ const clearCanvas = () => {
       </div>
     </div>
   </div>
+  <transition name="modal">
+    <div
+      v-show="visibleModal"
+      class="fixed top-0 flex items-center justify-center h-full w-full z-10 bg-[#2b2c34]/60"
+    >
+      <input
+        type="radio"
+        name="size"
+        value="128"
+        id="size-sm"
+        v-model="imageSize"
+        class="hidden"
+      />
+      <input
+        type="radio"
+        name="size"
+        value="256"
+        id="size-md"
+        v-model="imageSize"
+        class="hidden"
+      />
+      <input
+        type="radio"
+        name="size"
+        value="512"
+        id="size-lg"
+        v-model="imageSize"
+        class="hidden"
+      />
+      <div
+        class="inline-flex space-x-4 p-4 bg-[#fffffe] rounded-md box-shadow z-20"
+      >
+        <canvas
+          ref="confirmCanvas"
+          :width="previewSize"
+          :height="previewSize"
+          class="border border-solid border-[#2b2c34]"
+        ></canvas>
+        <div class="space-y-4">
+          <div class="flex justify-end">
+            <button @click="visibleModal = false">
+              <img
+                src="~/assets/close.svg"
+                width="16"
+                height="16"
+                alt="pen-icon"
+              />
+            </button>
+          </div>
+          <div class="flex items-end space-x-2">
+            <input
+              type="text"
+              class="border-2 border-solid border-[#2b2c34] rounded-md py-1 px-2 w-40"
+              placeholder="Image Name"
+              v-model="imageName"
+            />
+            <p class="text-sm font-bold mb-1">.png</p>
+          </div>
+          <div class="flex space-x-4">
+            <div class="grid grid-cols-3 gap-x-2">
+              <label
+                for="size-sm"
+                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
+                :class="{ 'bg-[#2b2c34]': imageSize === '128' }"
+              >
+                <span class="tooltip-text opacity-0">Image Size 128px</span>
+                <p
+                  class="text-xs font-bold text-[#2b2c34]"
+                  :class="{ 'text-[#fffffe]': imageSize === '128' }"
+                >
+                  128px
+                </p>
+              </label>
+              <label
+                for="size-md"
+                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
+                :class="{ 'bg-[#2b2c34]': imageSize === '256' }"
+              >
+                <span class="tooltip-text opacity-0">Image Size 256px</span>
+                <p
+                  class="text-xs font-bold text-[#2b2c34]"
+                  :class="{ 'text-[#fffffe]': imageSize === '256' }"
+                >
+                  256px
+                </p>
+              </label>
+              <label
+                for="size-lg"
+                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
+                :class="{ 'bg-[#2b2c34]': imageSize === '512' }"
+              >
+                <span class="tooltip-text opacity-0">Image Size 512px</span>
+                <p
+                  class="text-xs font-bold text-[#2b2c34]"
+                  :class="{ 'text-[#fffffe]': imageSize === '512' }"
+                >
+                  512px
+                </p>
+              </label>
+            </div>
+            <div>
+              <button
+                type="submit"
+                @click="downloadImage"
+                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed"
+                :disabled="imageName === ''"
+              >
+                <span class="tooltip-text opacity-0">Download</span>
+                <img
+                  src="~/assets/download.svg"
+                  :class="{ 'opacity-30': imageName === '' }"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <style scoped>
@@ -868,5 +1002,19 @@ const clearCanvas = () => {
 
 .transition {
   transition: 0.2s ease-in;
+}
+
+.box-shadow {
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.2s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 </style>
