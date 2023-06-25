@@ -24,6 +24,8 @@ const visibleModal = ref(false);
 const confirmCanvas = ref<HTMLCanvasElement | null>(null);
 const imageSize = ref("256");
 const imageName = ref("");
+const strokeStart = ref<{ x: number; y: number }>({ x: 0, y: 0 });
+const strokeEnd = ref<{ x: number; y: number }>({ x: 0, y: 0 });
 
 const {
   currentColor,
@@ -90,6 +92,10 @@ const scaleCanvas = () => {
 
 const onCanvasMousemove = (event: MouseEvent) => {
   coords.value = getRelativeCoordinates(event.clientX, event.clientY);
+  if (mode.value === "stroke") {
+    hoverAt(coords.value.x, coords.value.y);
+    return;
+  }
   if (isClicked.value) {
     if (
       Math.abs(coords.value.x - previousCol.value) > 1 ||
@@ -128,6 +134,9 @@ const onCanvasMousedown = (event: MouseEvent) => {
     fillAt(coords.value.x, coords.value.y);
     const endTime = performance.now();
     console.log(`fill実行時間: ${endTime - startTime} ミリ秒`);
+  } else if (mode.value === "stroke") {
+    strokeStart.value.x = coords.value.x;
+    strokeStart.value.y = coords.value.y;
   }
   if (containsPixel(coords.value.x, coords.value.y)) {
     const originalPixelColor = getPixelColor(coords.value.x, coords.value.y);
@@ -135,8 +144,44 @@ const onCanvasMousedown = (event: MouseEvent) => {
   }
 };
 
-const onCanvasMouseup = () => {
+const onCanvasMouseup = (event: MouseEvent) => {
+  coords.value = getRelativeCoordinates(event.clientX, event.clientY);
+  if (mode.value === "stroke") {
+    strokeEnd.value!.x = coords.value.x;
+    strokeEnd.value!.y = coords.value.y;
+    const interpolatedPixels = getLinePixels(
+      strokeStart.value.x,
+      strokeEnd.value!.x,
+      strokeStart.value.y,
+      strokeEnd.value!.y,
+    );
+    for (let i = 0; i < interpolatedPixels.length; i++) {
+      const coords = interpolatedPixels[i];
+      drawAt(coords.col, coords.row);
+    }
+    originalColor.value = null;
+    originalCoords.value = null;
+  }
   isClicked.value = false;
+  canvasLeave()
+  const previreContext = preview.value?.getContext("2d");
+  renderPreview(previreContext);
+};
+
+const onMouseleave = (event: MouseEvent) => {
+  if (originalCoords.value) {
+    // 元の色に戻す
+    setPixelColor(
+      originalCoords.value.x,
+      originalCoords.value.y,
+      originalColor.value!
+    );
+    renderPixel();
+  }
+  canvasLeave()
+};
+
+const canvasLeave = () => {
   const imageData = uint32ArrayToImageData(
     pixels.value,
     pixelSize.value,
@@ -148,22 +193,7 @@ const onCanvasMouseup = () => {
   }
   startCol.value = null;
   startRow.value = null;
-  const previreContext = preview.value?.getContext("2d");
-  renderPreview(previreContext);
-};
-
-const onMouseleave = () => {
-  if (originalCoords.value) {
-    // 元の色に戻す
-    setPixelColor(
-      originalCoords.value.x,
-      originalCoords.value.y,
-      originalColor.value!
-    );
-    renderPixel();
-  }
-  onCanvasMouseup();
-};
+}
 
 // ピクセル座標を返す
 const getRelativeCoordinates = (x: number, y: number) => {
@@ -305,7 +335,7 @@ const downloadImage = () => {
     visibleGrid.value = true;
     renderPixel();
   }
-  visibleModal.value = false
+  visibleModal.value = false;
 };
 
 const imageDataToUint32Array = (imageData: ImageData) => {
@@ -530,6 +560,7 @@ const openDownloadModal = () => {
           :class="{
             'pen-cursor': mode === 'pen',
             'bucket-cursor': mode === 'bucket',
+            'stroke-cursor': mode === 'stroke',
           }"
         >
           <canvas
@@ -564,6 +595,14 @@ const openDownloadModal = () => {
             class="hidden"
             v-model="mode"
           />
+          <input
+            type="radio"
+            name="mode"
+            value="stroke"
+            id="stroke"
+            class="hidden"
+            v-model="mode"
+          />
           <div class="flex space-x-2">
             <label
               for="pen"
@@ -589,6 +628,20 @@ const openDownloadModal = () => {
                 width="32"
                 height="32"
                 alt="bucket-icon"
+                color="white"
+              />
+            </label>
+            <label
+              for="stroke"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
+              :class="{ 'bg-[#2b2c34]': mode === 'stroke' }"
+            >
+              <span class="tooltip-text">Stroke (Shift)</span>
+              <img
+                src="~/assets/stroke.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
                 color="white"
               />
             </label>
@@ -652,6 +705,14 @@ const openDownloadModal = () => {
                 width="32"
                 height="32"
                 alt="bucket-icon"
+              />
+              <img
+                v-else-if="color === currentColor && mode === 'stroke'"
+                src="~/assets/stroke.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
               />
             </label>
           </div>
@@ -939,6 +1000,10 @@ const openDownloadModal = () => {
 
 .bucket-cursor {
   cursor: url("assets/fill-cursor.svg") 12 12, default;
+}
+
+.stroke-cursor {
+  cursor: url("assets/stroke-cursor.svg") 0 12, default;
 }
 
 .color-picker {
