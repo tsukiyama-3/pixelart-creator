@@ -550,6 +550,7 @@ const openDownloadModal = () => {
     @keydown.g="toggleGrid"
     @keydown.p="mode = 'pen'"
     @keydown.b="mode = 'bucket'"
+    @keydown.shift="mode = 'stroke'"
     @keydown.z="undo"
     @keydown.x="redo"
     tabindex="0"
