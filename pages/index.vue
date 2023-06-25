@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useColor, colorToInt } from "~/composabels/colors";
 
+const colorMode = useColorMode();
 const canvas = ref<HTMLCanvasElement | null>(null);
 const preview = ref<HTMLCanvasElement | null>(null);
 const isClicked = ref(false);
@@ -10,7 +11,7 @@ const pixelSize = ref(32);
 const dotSize = ref(16);
 const coords = ref<{ x: number; y: number } | null>(null);
 const mode = ref("pen");
-const visibleGrid = ref(false);
+const visibleGrid = ref(true);
 const pixels = ref<Uint32Array | null>(null);
 const previousCol = ref(0);
 const previousRow = ref(0);
@@ -153,7 +154,7 @@ const onCanvasMouseup = (event: MouseEvent) => {
       strokeStart.value.x,
       strokeEnd.value!.x,
       strokeStart.value.y,
-      strokeEnd.value!.y,
+      strokeEnd.value!.y
     );
     for (let i = 0; i < interpolatedPixels.length; i++) {
       const coords = interpolatedPixels[i];
@@ -163,7 +164,7 @@ const onCanvasMouseup = (event: MouseEvent) => {
     originalCoords.value = null;
   }
   isClicked.value = false;
-  canvasLeave()
+  canvasLeave();
   const previreContext = preview.value?.getContext("2d");
   renderPreview(previreContext);
 };
@@ -178,7 +179,7 @@ const onMouseleave = (event: MouseEvent) => {
     );
     renderPixel();
   }
-  canvasLeave()
+  canvasLeave();
 };
 
 const canvasLeave = () => {
@@ -193,7 +194,7 @@ const canvasLeave = () => {
   }
   startCol.value = null;
   startRow.value = null;
-}
+};
 
 // ピクセル座標を返す
 const getRelativeCoordinates = (x: number, y: number) => {
@@ -432,8 +433,12 @@ const containsPixel = (col: number, row: number) => {
 
 const addGrid = () => {
   const context = canvas.value!.getContext("2d");
-  context!.strokeStyle = "rgba(0, 0, 0, 1)";
-  context!.lineWidth = 1 / 64;
+  if (colorMode.preference === "light") {
+    context!.strokeStyle = "rgba(0, 0, 0, 1)";
+  } else if (colorMode.preference === "dark") {
+    context!.strokeStyle = "rgba(44, 182, 125, 1)";
+  }
+  context!.lineWidth = 1 / pixelSize.value;
 
   for (let x = 1; x < pixelSize.value; x += 1) {
     context!.beginPath();
@@ -449,6 +454,13 @@ const addGrid = () => {
     context!.stroke();
   }
 };
+
+onMounted(() => {
+  watchEffect(() => {
+    addGrid();
+    renderPixel();
+  });
+});
 
 const toggleGrid = () => {
   visibleGrid.value = !visibleGrid.value;
@@ -568,7 +580,7 @@ const openDownloadModal = () => {
             ref="canvas"
             :width="canvasSize"
             :height="canvasSize"
-            class="border border-solid border-[#2b2c34]"
+            class="border border-solid border-[#2b2c34] dark:border-[#2cb67d]"
           ></canvas>
         </div>
       </div>
@@ -577,7 +589,7 @@ const openDownloadModal = () => {
           ref="preview"
           :width="previewSize"
           :height="previewSize"
-          class="border border-solid border-[#2b2c34]"
+          class="border border-solid border-[#2b2c34] dark:border-[#2cb67d]"
         ></canvas>
         <div class="flex">
           <input
@@ -607,12 +619,34 @@ const openDownloadModal = () => {
           <div class="flex space-x-2">
             <label
               for="pen"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-              :class="{ 'bg-[#2b2c34]': mode === 'pen' }"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': mode === 'pen' }"
             >
               <span class="tooltip-text">Pen (P)</span>
               <img
+                v-if="colorMode.preference === 'light' && mode !== 'pen'"
                 src="~/assets/pencil.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'light' && mode === 'pen'"
+                src="~/assets/pencil_light.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode !== 'pen'"
+                src="~/assets/dark/pencil_dark.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode === 'pen'"
+                src="~/assets/dark/pencil_active.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -620,12 +654,39 @@ const openDownloadModal = () => {
             </label>
             <label
               for="bucket"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-              :class="{ 'bg-[#2b2c34]': mode === 'bucket' }"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': mode === 'bucket' }"
             >
               <span class="tooltip-text">Bucket (B)</span>
               <img
+                v-if="colorMode.preference === 'light' && mode !== 'bucket'"
                 src="~/assets/fill.svg"
+                width="32"
+                height="32"
+                alt="bucket-icon"
+                color="white"
+              />
+              <img
+                v-else-if="
+                  colorMode.preference === 'light' && mode === 'bucket'
+                "
+                src="~/assets/fill_light.svg"
+                width="32"
+                height="32"
+                alt="bucket-icon"
+                color="white"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode !== 'bucket'"
+                src="~/assets/dark/fill_dark.svg"
+                width="32"
+                height="32"
+                alt="bucket-icon"
+                color="white"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode === 'bucket'"
+                src="~/assets/dark/fill_active.svg"
                 width="32"
                 height="32"
                 alt="bucket-icon"
@@ -634,12 +695,37 @@ const openDownloadModal = () => {
             </label>
             <label
               for="stroke"
-              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-              :class="{ 'bg-[#2b2c34]': mode === 'stroke' }"
+              class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': mode === 'stroke' }"
             >
               <span class="tooltip-text">Stroke (Shift)</span>
               <img
+                v-if="colorMode.preference === 'light' && mode !== 'stroke'"
                 src="~/assets/stroke.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
+              />
+              <img
+                v-if="colorMode.preference === 'light' && mode === 'stroke'"
+                src="~/assets/stroke_light.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode !== 'stroke'"
+                src="~/assets/dark/stroke_dark.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode === 'stroke'"
+                src="~/assets/dark/stroke_active.svg"
                 width="32"
                 height="32"
                 alt="stroke-icon"
@@ -649,12 +735,34 @@ const openDownloadModal = () => {
             <div>
               <button
                 @click="toggleGrid"
-                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-                :class="{ 'bg-[#2b2c34]': visibleGrid }"
+                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+                :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': visibleGrid }"
               >
                 <span class="tooltip-text">Grid (G)</span>
                 <img
+                  v-if="colorMode.preference === 'light' && !visibleGrid"
                   src="~/assets/grid.svg"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+                <img
+                  v-if="colorMode.preference === 'light' && visibleGrid"
+                  src="~/assets/grid_light.svg"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+                <img
+                  v-else-if="colorMode.preference === 'dark' && !visibleGrid"
+                  src="~/assets/dark/grid_dark.svg"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+                <img
+                  v-else-if="colorMode.preference === 'dark' && visibleGrid"
+                  src="~/assets/dark/grid_active.svg"
                   width="32"
                   height="32"
                   alt="pen-icon"
@@ -678,38 +786,92 @@ const openDownloadModal = () => {
             />
             <label
               :for="color"
-              class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer relative color-label"
+              class="content-[''] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer relative color-label dark:border-[#2cb67d]"
               :style="{ backgroundColor: color }"
             >
               <button
                 v-show="colorPallet!.length > 1"
-                class="color-delete-btn absolute w-5 h-5 leading-none bg-[#fffffe] rounded-full -top-2 -left-2 border-2 border-solid border-[#2b2c34]"
+                class="color-delete-btn absolute w-5 h-5 leading-none bg-[#fffffe] rounded-full -top-2 -left-2 border-2 border-solid border-[#2b2c34] dark:border-[#2cb67d] dark:bg-[#16161a]"
                 @click="removeColor(color)"
               >
                 <img
+                  v-if="colorMode.preference === 'light'"
                   src="~/assets/remove.svg"
+                  width="32"
+                  height="32"
+                  alt="pen-icon"
+                />
+                <img
+                  v-else-if="colorMode.preference === 'dark'"
+                  src="~/assets/dark/remove_dark.svg"
                   width="32"
                   height="32"
                   alt="pen-icon"
                 />
               </button>
               <img
-                v-if="color === currentColor && mode === 'pen'"
+                v-if="
+                  color === currentColor &&
+                  mode === 'pen' &&
+                  colorMode.preference === 'light'
+                "
                 src="~/assets/pencil.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
               />
               <img
-                v-else-if="color === currentColor && mode === 'bucket'"
+                v-else-if="
+                  color === currentColor &&
+                  mode === 'bucket' &&
+                  colorMode.preference === 'light'
+                "
                 src="~/assets/fill.svg"
                 width="32"
                 height="32"
                 alt="bucket-icon"
               />
               <img
-                v-else-if="color === currentColor && mode === 'stroke'"
+                v-else-if="
+                  color === currentColor &&
+                  mode === 'stroke' &&
+                  colorMode.preference === 'light'
+                "
                 src="~/assets/stroke.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
+              />
+              <img
+                v-else-if="
+                  color === currentColor &&
+                  mode === 'pen' &&
+                  colorMode.preference === 'dark'
+                "
+                src="~/assets/dark/pencil_active.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="
+                  color === currentColor &&
+                  mode === 'bucket' &&
+                  colorMode.preference === 'dark'
+                "
+                src="~/assets/dark/fill_active.svg"
+                width="32"
+                height="32"
+                alt="bucket-icon"
+              />
+              <img
+                v-else-if="
+                  color === currentColor &&
+                  mode === 'stroke' &&
+                  colorMode.preference === 'dark'
+                "
+                src="~/assets/dark/stroke_active.svg"
                 width="32"
                 height="32"
                 alt="stroke-icon"
@@ -721,10 +883,18 @@ const openDownloadModal = () => {
             <label
               v-if="!visibleColorPicker"
               for="color-picker"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip dark:border-[#2cb67d]"
             >
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/add.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/add_dark.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -733,11 +903,19 @@ const openDownloadModal = () => {
             <button
               v-else
               @click="saveColor"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip dark:border-[#2cb67d]"
               :style="{ backgroundColor: pickedColor }"
             >
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/check.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/check_dark.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -757,11 +935,20 @@ const openDownloadModal = () => {
             <button
               @click="undo"
               :disabled="undoPixelsStates.length <= 1"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip dark:border-[#2cb67d] dark:disabled:border-[#2cb67d]/30"
             >
               <span class="tooltip-text opacity-0">Undo (Z)</span>
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/arrow_back.svg"
+                :class="{ 'opacity-30': undoPixelsStates.length <= 1 }"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/arrow_back_dark.svg"
                 :class="{ 'opacity-30': undoPixelsStates.length <= 1 }"
                 width="32"
                 height="32"
@@ -770,7 +957,7 @@ const openDownloadModal = () => {
             </button>
           </div>
           <div
-            class="text-xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34]"
+            class="text-xl font-bold text-[#2b2c34] grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] dark:text-[#2cb67d] dark:border-[#2cb67d]"
           >
             <ClientOnly>
               {{ undoPixelsStates.length - 1 }}
@@ -780,11 +967,20 @@ const openDownloadModal = () => {
             <button
               @click="redo"
               :disabled="redoPixelsStates.length <= 0"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed tooltip dark:border-[#2cb67d] disabled:dark:border-[#2cb67d]/30"
             >
               <span class="tooltip-text opacity-0">Redo (X)</span>
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/arrow_next.svg"
+                :class="{ 'opacity-30': redoPixelsStates.length <= 0 }"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/arrow_next_dark.svg"
                 :class="{ 'opacity-30': redoPixelsStates.length <= 0 }"
                 width="32"
                 height="32"
@@ -797,12 +993,20 @@ const openDownloadModal = () => {
           <div>
             <button
               @click="changeSize(64)"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition"
-              :class="{ 'bg-[#2b2c34]': pixelSize === 64 }"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': pixelSize === 64 }"
             >
               <p
                 class="text-xs font-bold text-[#2b2c34]"
-                :class="{ 'text-[#fffffe]': pixelSize === 64 }"
+                :class="{
+                  'dark:text-[#2b2c34]':
+                    (colorMode.preference === 'light' && pixelSize !== 64) ||
+                    (pixelSize === 64 && colorMode.preference === 'dark'),
+                  'dark:text-[#2cb67d]':
+                    colorMode.preference === 'dark' && pixelSize !== 64,
+                  'text-[#fffffe]':
+                    pixelSize === 64 && colorMode.preference === 'light',
+                }"
               >
                 64x64
               </p>
@@ -811,12 +1015,20 @@ const openDownloadModal = () => {
           <div>
             <button
               @click="changeSize(32)"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition"
-              :class="{ 'bg-[#2b2c34]': pixelSize === 32 }"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': pixelSize === 32 }"
             >
               <p
                 class="text-xs font-bold text-[#2b2c34]"
-                :class="{ 'text-[#fffffe]': pixelSize === 32 }"
+                :class="{
+                  'dark:text-[#2b2c34]':
+                    (colorMode.preference === 'light' && pixelSize !== 32) ||
+                    (pixelSize === 32 && colorMode.preference === 'dark'),
+                  'dark:text-[#2cb67d]':
+                    colorMode.preference === 'dark' && pixelSize !== 32,
+                  'text-[#fffffe]':
+                    pixelSize === 32 && colorMode.preference === 'light',
+                }"
               >
                 32x32
               </p>
@@ -825,12 +1037,20 @@ const openDownloadModal = () => {
           <div>
             <button
               @click="changeSize(16)"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition"
-              :class="{ 'bg-[#2b2c34]': pixelSize === 16 }"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer transition dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': pixelSize === 16 }"
             >
               <p
                 class="text-xs font-bold text-[#2b2c34]"
-                :class="{ 'text-[#fffffe]': pixelSize === 16 }"
+                :class="{
+                  'dark:text-[#2b2c34]':
+                    (colorMode.preference === 'light' && pixelSize !== 16) ||
+                    (pixelSize === 16 && colorMode.preference === 'dark'),
+                  'dark:text-[#2cb67d]':
+                    colorMode.preference === 'dark' && pixelSize !== 16,
+                  'text-[#fffffe]':
+                    pixelSize === 16 && colorMode.preference === 'light',
+                }"
               >
                 16x16
               </p>
@@ -841,11 +1061,19 @@ const openDownloadModal = () => {
           <div>
             <button
               @click="openDownloadModal"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip dark:border-[#2cb67d]"
             >
               <span class="tooltip-text opacity-0">Download</span>
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/download.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/download_dark.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -855,11 +1083,19 @@ const openDownloadModal = () => {
           <div>
             <button
               @click="clearCanvas"
-              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip"
+              class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip dark:border-[#2cb67d]"
             >
               <span class="tooltip-text opacity-0">Clear Canvas</span>
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/clear.svg"
+                width="32"
+                height="32"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/clear_dark.svg"
                 width="32"
                 height="32"
                 alt="pen-icon"
@@ -900,19 +1136,27 @@ const openDownloadModal = () => {
         class="hidden"
       />
       <div
-        class="inline-flex space-x-4 p-4 bg-[#fffffe] rounded-md box-shadow z-20"
+        class="inline-flex space-x-4 p-4 bg-[#fffffe] rounded-md box-shadow z-20 dark:bg-[#16161a]"
       >
         <canvas
           ref="confirmCanvas"
           :width="previewSize"
           :height="previewSize"
-          class="border border-solid border-[#2b2c34]"
+          class="border border-solid border-[#2b2c34] dark:border-[#2cb67d]"
         ></canvas>
         <div class="space-y-4">
           <div class="flex justify-end">
             <button @click="visibleModal = false">
               <img
+                v-if="colorMode.preference === 'light'"
                 src="~/assets/close.svg"
+                width="16"
+                height="16"
+                alt="pen-icon"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark'"
+                src="~/assets/dark/close_dark.svg"
                 width="16"
                 height="16"
                 alt="pen-icon"
@@ -922,49 +1166,64 @@ const openDownloadModal = () => {
           <div class="flex items-end space-x-2">
             <input
               type="text"
-              class="border-2 border-solid border-[#2b2c34] rounded-md py-1 px-2 w-40"
+              class="border-2 border-solid border-[#2b2c34] rounded-md py-1 px-2 w-40 dark:border-[#2cb67d] dark:bg-[#16161a] dark:text-[#2cb67d] placeholder:dark:text-[#2cb67d]/60"
               placeholder="Image Name"
               v-model="imageName"
             />
-            <p class="text-sm font-bold mb-1">.png</p>
+            <p class="text-sm font-bold mb-1 dark:text-[#2cb67d]">.png</p>
           </div>
           <div class="flex space-x-4">
             <div class="grid grid-cols-3 gap-x-2">
               <label
                 for="size-sm"
-                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-                :class="{ 'bg-[#2b2c34]': imageSize === '128' }"
+                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+                :class="{
+                  'bg-[#2b2c34] dark:bg-[#2cb67d]': imageSize === '128',
+                }"
               >
                 <span class="tooltip-text opacity-0">Image Size 128px</span>
                 <p
                   class="text-xs font-bold text-[#2b2c34]"
-                  :class="{ 'text-[#fffffe]': imageSize === '128' }"
+                  :class="{
+                    'dark:text-[#2cb67d]': imageSize !== '128',
+                    'text-[#fffffe] dark:text-[#16161a]': imageSize === '128',
+                  }"
                 >
                   128px
                 </p>
               </label>
               <label
                 for="size-md"
-                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-                :class="{ 'bg-[#2b2c34]': imageSize === '256' }"
+                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+                :class="{
+                  'bg-[#2b2c34] dark:bg-[#2cb67d]': imageSize === '256',
+                }"
               >
                 <span class="tooltip-text opacity-0">Image Size 256px</span>
                 <p
                   class="text-xs font-bold text-[#2b2c34]"
-                  :class="{ 'text-[#fffffe]': imageSize === '256' }"
+                  :class="{
+                    'dark:text-[#2cb67d]': imageSize !== '256',
+                    'text-[#fffffe] dark:text-[#16161a]': imageSize === '256',
+                  }"
                 >
                   256px
                 </p>
               </label>
               <label
                 for="size-lg"
-                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip"
-                :class="{ 'bg-[#2b2c34]': imageSize === '512' }"
+                class="inline-flex rounded-md items-center justify-center w-12 h-12 border-2 border-solid border-[#2b2c34] cursor-pointer transition tooltip dark:border-[#2cb67d]"
+                :class="{
+                  'bg-[#2b2c34] dark:bg-[#2cb67d]': imageSize === '512',
+                }"
               >
                 <span class="tooltip-text opacity-0">Image Size 512px</span>
                 <p
                   class="text-xs font-bold text-[#2b2c34]"
-                  :class="{ 'text-[#fffffe]': imageSize === '512' }"
+                  :class="{
+                    'dark:text-[#2cb67d]': imageSize !== '512',
+                    'text-[#fffffe] dark:text-[#16161a]': imageSize === '512',
+                  }"
                 >
                   512px
                 </p>
@@ -972,18 +1231,26 @@ const openDownloadModal = () => {
             </div>
             <div>
               <button
-                type="submit"
                 @click="downloadImage"
-                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed"
+                class="grid justify-center items-center w-12 h-12 rounded-md border-2 border-solid border-[#2b2c34] cursor-pointer tooltip disabled:border-[#2b2c34]/30 disabled:cursor-not-allowed dark:border-[#2cb67d] dark:disabled:border-[#2cb67d]/30"
                 :disabled="imageName === ''"
               >
                 <span class="tooltip-text opacity-0">Download</span>
                 <img
+                  v-if="colorMode.preference === 'light'"
                   src="~/assets/download.svg"
                   :class="{ 'opacity-30': imageName === '' }"
                   width="32"
                   height="32"
-                  alt="pen-icon"
+                  alt="download-icon"
+                />
+                <img
+                  v-else-if="colorMode.preference === 'dark'"
+                  src="~/assets/dark/download_dark.svg"
+                  :class="{ 'opacity-30': imageName === '' }"
+                  width="32"
+                  height="32"
+                  alt="download-icon"
                 />
               </button>
             </div>
@@ -1019,14 +1286,6 @@ const openDownloadModal = () => {
   background-color: transparent;
   border: none;
   cursor: pointer;
-}
-
-.color-picker::-webkit-color-swatch {
-  border-radius: 6px;
-  border: 2px solid #2b2c34;
-  min-width: 44px;
-  min-height: 44px;
-  background-image: url("assets/add.svg");
 }
 
 .color-label:hover .color-delete-btn {

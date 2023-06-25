@@ -29,11 +29,14 @@ export default defineNuxtConfig({
     preset: "firebase",
   },
   css: ["~/assets/css/main.css"],
-  modules: ["@nuxtjs/device"],
+  modules: ["@nuxtjs/device", "@nuxtjs/color-mode"],
   postcss: {
     plugins: {
       tailwindcss: {},
       autoprefixer: {},
     },
+  },
+  colorMode: {
+    classSuffix: "",
   },
 });
