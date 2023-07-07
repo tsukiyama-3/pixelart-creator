@@ -18,6 +18,8 @@ export const useRender = () => {
 
   const renderGrid = (canvas: HTMLCanvasElement | null) => {
     const { visible } = useGrid()
+
+    const colorMode = useColorMode()
     const context = canvas?.getContext('2d')
 
     if (!visible.value) {
@@ -25,7 +27,12 @@ export const useRender = () => {
       return
     }
 
-    context!.strokeStyle = 'rgba(0, 0, 0, 1)'
+    if (colorMode.preference === 'light') {
+      context!.strokeStyle = 'rgba(0, 0, 0, 1)'
+    } else if (colorMode.preference === 'dark') {
+      context!.strokeStyle = 'rgba(44, 182, 125, 1)'
+    }
+
     context!.lineWidth = 1 / pixelResolution.value
 
     for (let x = 1; x < pixelResolution.value; x += 1) {

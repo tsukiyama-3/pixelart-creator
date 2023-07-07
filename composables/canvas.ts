@@ -38,6 +38,14 @@ export const useCanvas = () => {
     renderBackground(backgroundCanvas)
   }
 
+  const clearCanvas = (canvas: HTMLCanvasElement | null, previewCanvas: HTMLCanvasElement | null) => {
+    const confirmed = window.confirm('Do you want to clear the canvas?')
+    if (!confirmed) {
+      return
+    }
+    clear(canvas, previewCanvas)
+  }
+
   const clear = (canvas: HTMLCanvasElement | null, previewCanvas: HTMLCanvasElement | null) => {
     const { renderPixel } = useRender()
     const { pushUndoState } = useHistory()
@@ -104,7 +112,7 @@ export const useCanvas = () => {
     canvasSize,
     init,
     initBackground,
-    clear,
+    clearCanvas,
     changeSize,
     scaleCanvas,
   }

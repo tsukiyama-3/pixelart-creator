@@ -9,6 +9,7 @@ import { useGrid } from '../composables/grid'
 import { useModal } from '../composables/modal'
 import { useImage } from '../composables/images'
 import { pixelResolution } from '../composables/pixels'
+import { useRender } from '../composables/render'
 
 const colorMode = useColorMode()
 const {
@@ -21,7 +22,7 @@ const {
   canvasSize,
   init,
   initBackground,
-  clear,
+  clearCanvas,
   changeSize,
 } = useCanvas()
 const { undo, redo, pushUndoState } = useHistory()
@@ -31,6 +32,7 @@ const { visible: visibleGrid, toggle } = useGrid()
 const { currentColor, colorPallet, visibleColorPicker, pickedColor, addColor, saveColor, removeColor } = useColor()
 const { visible: visibleModal, show, dismiss } = useModal()
 const { imageName, imageSize, downloadImage } = useImage()
+const { renderGrid } = useRender()
 
 onMounted(() => {
   initBackground()
@@ -39,6 +41,9 @@ onMounted(() => {
   loadPixels(canvas.value, previewCanvas.value)
   loadColorPallet()
   pushUndoState()
+  watchEffect(() => {
+    renderGrid(gridCanvas.value)
+  })
 })
 </script>
 
@@ -49,6 +54,13 @@ onMounted(() => {
     @mousedown="onMousedown($event, canvas)"
     @mouseup="onMouseUp($event, canvas, previewCanvas, downloadCanvas)"
     @mouseleave="onMouseleave($event, previewCanvas, downloadCanvas)"
+    @keydown.p="mode = 'pen'"
+    @keydown.b="mode = 'bucket'"
+    @keydown.shift="mode = 'stroke'"
+    @keydown.g="toggle(gridCanvas)"
+    @keydown.z="undo(canvas, previewCanvas)"
+    @keydown.x="redo(canvas, previewCanvas)"
+    tabindex="0"
   >
     <div class="grid grid-cols-[656px_auto] gap-8">
       <!-- editor -->
@@ -532,7 +544,7 @@ onMounted(() => {
           </div>
           <div>
             <button
-              @click="clear(canvas, previewCanvas)"
+              @click="clearCanvas(canvas, previewCanvas)"
               class="tooltip grid h-12 w-12 cursor-pointer items-center justify-center rounded-md border-2 border-solid border-[#2b2c34] dark:border-[#2cb67d]"
             >
               <span class="tooltip-text opacity-0">Clear Canvas</span>
