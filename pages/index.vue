@@ -57,6 +57,7 @@ onMounted(() => {
     @keydown.p="mode = 'pen'"
     @keydown.b="mode = 'bucket'"
     @keydown.shift="mode = 'stroke'"
+    @keydown.e="mode = 'eraser'"
     @keydown.g="toggle(gridCanvas)"
     @keydown.z="undo(canvas, previewCanvas)"
     @keydown.x="redo(canvas, previewCanvas)"
@@ -240,7 +241,7 @@ onMounted(() => {
               class="tooltip inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-md border-2 border-solid border-[#2b2c34] transition dark:border-[#2cb67d]"
               :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': mode === 'eraser' }"
             >
-              <span class="tooltip-text">eraser (Shift)</span>
+              <span class="tooltip-text">eraser (E)</span>
               <img
                 v-if="colorMode.preference === 'light' && mode !== 'eraser'"
                 src="~/assets/eraser.svg"
