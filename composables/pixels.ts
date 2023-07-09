@@ -7,6 +7,7 @@ pixels.value = new Uint32Array(pixelResolution.value * pixelResolution.value)
 
 export const usePixel = () => {
   const containsPixel = (col: number, row: number) => {
+    if (col === null || row === null) return false
     return col >= 0 && row >= 0 && col < pixelResolution.value && row < pixelResolution.value
   }
 
@@ -68,7 +69,8 @@ export const usePixel = () => {
     return visitedPixels
   }
 
-  const getLinePixels = (x0: number, x1: number, y0: number, y1: number) => {
+  const getLinePixels = (x0: number | null, x1: number | null, y0: number | null, y1: number | null) => {
+    if (x0 === null || x1 === null || y0 === null || y1 === null) return null
     const returnPixels = []
     const dx = Math.abs(x1 - x0)
     const dy = Math.abs(y1 - y0)

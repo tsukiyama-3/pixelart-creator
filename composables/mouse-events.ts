@@ -2,10 +2,10 @@ export const useMouseEvent = () => {
   const { getLinePixels } = usePixel()
 
   const isClicked = ref(false)
-  const previousCol = ref(0)
-  const previousRow = ref(0)
-  const strokeStart = ref<{ x: number; y: number }>({ x: 0, y: 0 })
-  const strokeEnd = ref<{ x: number; y: number }>({ x: 0, y: 0 })
+  const previousCol = ref<number | null>(null)
+  const previousRow = ref<number | null>(null)
+  const strokeStart = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
+  const strokeEnd = ref<{ x: number | null; y: number | null }>({ x: null, y: null })
 
   const onMousemove = (event: MouseEvent, canvas: HTMLCanvasElement | null, hoverCanvas: HTMLCanvasElement | null) => {
     const { coords, getRelativeCoordinates } = useCoord()
@@ -20,10 +20,10 @@ export const useMouseEvent = () => {
     }
 
     if (isClicked.value) {
-      if (Math.abs(coords.value.x - previousCol.value) > 1 || Math.abs(coords.value.y - previousRow.value) > 1) {
-        const interpolatedPixels = getLinePixels(coords.value.x, previousCol.value, coords.value.y, previousRow.value)
-        for (let i = 0, l = interpolatedPixels.length; i < l; i++) {
-          const coords = interpolatedPixels[i]
+      if (Math.abs(coords.value.x - previousCol.value!) > 1 || Math.abs(coords.value.y - previousRow.value!) > 1) {
+        const interpolatedPixels = getLinePixels(coords.value.x!, previousCol.value!, coords.value.y!, previousRow.value!)
+        for (let i = 0, l = interpolatedPixels!.length; i < l; i++) {
+          const coords = interpolatedPixels![i]
           drawAt(coords.col, coords.row, canvas)
         }
       } else {
@@ -74,13 +74,13 @@ export const useMouseEvent = () => {
       strokeEnd.value!.x = coords.value.x
       strokeEnd.value!.y = coords.value.y
       const interpolatedPixels = getLinePixels(
-        strokeStart.value.x,
-        strokeEnd.value!.x,
-        strokeStart.value.y,
-        strokeEnd.value!.y
+        strokeStart.value.x!,
+        strokeEnd.value.x!,
+        strokeStart.value.y!,
+        strokeEnd.value.y!
       )
-      for (let i = 0; i < interpolatedPixels.length; i++) {
-        const coords = interpolatedPixels[i]
+      for (let i = 0; i < interpolatedPixels!.length; i++) {
+        const coords = interpolatedPixels![i]
         drawAt(coords.col, coords.row, canvas)
       }
     }
@@ -93,10 +93,11 @@ export const useMouseEvent = () => {
     // push undo state
     const { containsPixel } = usePixel()
     const { pushUndoState } = useHistory()
-    if (containsPixel(strokeStart.value.x, strokeStart.value.y)) {
+    if (containsPixel(strokeStart.value.x!, strokeStart.value.y!)) {
       pushUndoState()
       localStorage.setItem('pixels', JSON.stringify(Array.from(pixels.value!)))
     }
+    strokeStart.value = { x: null, y: null }
   }
 
   const onMouseleave = (
@@ -108,7 +109,7 @@ export const useMouseEvent = () => {
     // push undo state
     const { containsPixel } = usePixel()
     const { pushUndoState } = useHistory()
-    if (containsPixel(strokeStart.value.x, strokeStart.value.y)) {
+    if (containsPixel(strokeStart.value.x!, strokeStart.value.y!)) {
       pushUndoState()
       localStorage.setItem('pixels', JSON.stringify(Array.from(pixels.value!)))
       // render

@@ -70,6 +70,7 @@ onMounted(() => {
             'pen-cursor': mode === 'pen',
             'bucket-cursor': mode === 'bucket',
             'stroke-cursor': mode === 'stroke',
+            'eraser-cursor': mode === 'eraser',
           }"
         >
           <div class="relative h-[656px] w-[656px]">
@@ -750,6 +751,10 @@ onMounted(() => {
 
 .stroke-cursor {
   cursor: url('assets/stroke-cursor.svg') 0 12, default;
+}
+
+.eraser-cursor {
+  cursor: url('assets/eraser-cursor.svg') 0 12, default;
 }
 
 .color-picker {
