@@ -46,7 +46,7 @@ export const useMouseEvent = () => {
     strokeStart.value.x = coords.value.x
     strokeStart.value.y = coords.value.y
 
-    if (mode.value === 'pen') {
+    if (mode.value === 'pen' || mode.value === 'eraser') {
       drawAt(coords.value.x, coords.value.y, canvas)
     } else if (mode.value === 'bucket') {
       const startTime = performance.now()

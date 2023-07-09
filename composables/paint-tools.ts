@@ -5,8 +5,12 @@ export const usePaintTool = () => {
     const { containsPixel, setPixel } = usePixel()
     const { currentColor, colorToInt } = useColor()
     const { renderPixel } = useRender()
-    if (containsPixel(x, y)) {
+    if (containsPixel(x, y) && mode.value === 'eraser') {
+      setPixel(x, y, 0)
+    } else if (containsPixel(x, y) && mode.value !== 'eraser') {
       setPixel(x, y, colorToInt(currentColor.value))
+    }
+    if (containsPixel(x, y)) {
       renderPixel(canvas!)
       redoPixelsStates.value = []
     }
@@ -40,11 +44,14 @@ export const usePaintTool = () => {
     const { currentColor, hexToRgbString } = useColor()
 
     const hoverContext = canvas!.getContext('2d')
-    if (containsPixel(x, y)) {
-      if (!hoverContext) return
+    if (!hoverContext) return
 
+    if (containsPixel(x, y) && mode.value === 'eraser') {
       hoverContext.clearRect(0, 0, canvasSize, canvasSize)
-
+      hoverContext.fillStyle = hexToRgbString('#ffffff', 0.6)
+      hoverContext.fillRect(x, y, 1, 1)
+    } else if (containsPixel(x, y)) {
+      hoverContext.clearRect(0, 0, canvasSize, canvasSize)
       hoverContext.fillStyle = hexToRgbString(currentColor.value, 0.6)
       hoverContext.fillRect(x, y, 1, 1)
     } else {

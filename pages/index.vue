@@ -119,6 +119,7 @@ onMounted(() => {
           <input type="radio" name="mode" value="pen" id="pen" class="hidden" v-model="mode" />
           <input type="radio" name="mode" value="bucket" id="bucket" class="hidden" v-model="mode" />
           <input type="radio" name="mode" value="stroke" id="stroke" class="hidden" v-model="mode" />
+          <input type="radio" name="mode" value="eraser" id="eraser" class="hidden" v-model="mode" />
           <div class="flex space-x-2">
             <label
               for="pen"
@@ -227,6 +228,45 @@ onMounted(() => {
               <img
                 v-else-if="colorMode.preference === 'dark' && mode === 'stroke'"
                 src="~/assets/dark/stroke_active.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
+              />
+            </label>
+            <label
+              for="eraser"
+              class="tooltip inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-md border-2 border-solid border-[#2b2c34] transition dark:border-[#2cb67d]"
+              :class="{ 'bg-[#2b2c34] dark:bg-[#2cb67d]': mode === 'eraser' }"
+            >
+              <span class="tooltip-text">eraser (Shift)</span>
+              <img
+                v-if="colorMode.preference === 'light' && mode !== 'eraser'"
+                src="~/assets/eraser.svg"
+                width="32"
+                height="32"
+                alt="eraser-icon"
+                color="white"
+              />
+              <img
+                v-if="colorMode.preference === 'light' && mode === 'eraser'"
+                src="~/assets/eraser_light.svg"
+                width="32"
+                height="32"
+                alt="eraser-icon"
+                color="white"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode !== 'eraser'"
+                src="~/assets/dark/eraser_dark.svg"
+                width="32"
+                height="32"
+                alt="stroke-icon"
+                color="white"
+              />
+              <img
+                v-else-if="colorMode.preference === 'dark' && mode === 'eraser'"
+                src="~/assets/eraser.svg"
                 width="32"
                 height="32"
                 alt="stroke-icon"
