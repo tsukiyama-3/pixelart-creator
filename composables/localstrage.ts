@@ -16,9 +16,10 @@ export const useLocalstrage = () => {
   }
 
   const loadColorPallet = () => {
-    const { colorPallet } = useColor()
+    const { currentColor, colorPallet } = useColor()
     const storedColorPallet = localStorage.getItem('colorPallet')
     colorPallet.value = storedColorPallet ? JSON.parse(storedColorPallet) : ['#ff0000']
+    currentColor.value = colorPallet.value![0]
   }
 
   return {
