@@ -11,6 +11,7 @@ export const useHistory = () => {
       renderPixel(canvas!)
       renderPixel(previewCanvas!)
       redoPixelsStates.value.push(undoPixelsStates.value.pop()!)
+      localStorage.setItem('pixels', JSON.stringify(Array.from(pixels.value)))
     }
   }
 

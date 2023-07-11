@@ -49,7 +49,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="flex grow items-center justify-center outline-none"
+    class="flex grow items-center justify-center outline-none select-none"
     @mousemove="onMousemove($event, canvas, hoverCanvas)"
     @mousedown="onMousedown($event, canvas)"
     @mouseup="onMouseUp($event, canvas, previewCanvas, downloadCanvas)"
